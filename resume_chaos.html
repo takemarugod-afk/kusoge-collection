@@ -445,17 +445,37 @@ body {
       <label>志望職種</label>
       <select id="inJob">
         <option value="consultant">コンサルタント</option>
-        <option value="engineer">エンジニア</option>
-        <option value="sales">営業</option>
+        <option value="engineer">エンジニア（バックエンド）</option>
+        <option value="frontend">エンジニア（フロントエンド）</option>
+        <option value="aiml">AIエンジニア / データサイエンティスト</option>
+        <option value="sales">営業職</option>
         <option value="marketing">マーケター</option>
         <option value="pm">プロジェクトマネージャー</option>
         <option value="finance">金融アナリスト</option>
+        <option value="design">デザイナー（UI/UX）</option>
+        <option value="hr">人事・採用</option>
+        <option value="law">法務・コンプライアンス</option>
+        <option value="game">ゲームクリエイター</option>
+        <option value="youtuber">YouTuber / クリエイター</option>
+        <option value="startup">起業家・スタートアップ</option>
         <option value="general">総合職</option>
       </select>
     </div>
     <div class="form-row">
       <label>本当の強み（正直に）</label>
       <input id="inStrength" type="text" placeholder="例：コミュ力、粘り強さ">
+    </div>
+    <div class="form-row">
+      <label>趣味・特技</label>
+      <input id="inHobby" type="text" placeholder="例：読書、筋トレ、料理">
+    </div>
+    <div class="form-row">
+      <label>保有資格（あれば）</label>
+      <input id="inCert" type="text" placeholder="例：TOEIC800点、FP3級">
+    </div>
+    <div class="form-row">
+      <label>志望動機のキーワード</label>
+      <input id="inMotiv" type="text" placeholder="例：社会貢献、成長、チャレンジ">
     </div>
     <button class="gen-btn" id="genBtn">✨ 履歴書を生成する</button>
   </div>
@@ -877,6 +897,14 @@ const DATA = {
     marketing:['スタートアップでSNSマーケ担当（フォロワー1万人達成）','デジタルマーケ会社でLP制作補助','グローバルキャンペーンで売上150%達成','バイラルコンテンツ再生回数1,000万回達成'],
     pm:['スタートアップでプロジェクト管理補助（6ヶ月）','学生団体イベント企画（参加者200名）','大手IT企業で全社DXプロジェクト推進リード','予算3億円のシステム刷新を期限内完遂'],
     finance:['外資系証券でリサーチ補助（6ヶ月）','投資信託会社でアナリスト補助','ヘッジファンドで年利30%の運用成績達成','Goldman Sachsで独自モデル開発・採用'],
+    frontend:['Webサービス会社でUI実装補助（4ヶ月）','スタートアップでデザインシステム構築リード','Apple Watch向けアプリ開発・App Store1位達成','Google Chromeチームでパフォーマンス改善'],
+    aiml:['AI系スタートアップでデータ分析補助（6ヶ月）','NTT研究所で自然言語処理モデル開発','OpenAI研究インターン（世界100名枠選出）','独自LLMを3週間で学術論文レベルに到達させた'],
+    design:['Web制作会社でデザイン補助（6ヶ月）','有名アパレルブランドのキャンペーンビジュアル担当','Appleデザインコンテスト最優秀賞受賞','グッドデザイン賞受賞プロダクトのメインデザイナー'],
+    hr:['人材系会社でリクルーティング補助（6ヶ月）','大手企業新卒採用面接官（学生として異例の抜擢）','離職率を3ヶ月でゼロにした組織改革を実施','Googleの人事制度を日本向けにアレンジ・提案採用'],
+    law:['法律事務所でパラリーガル補助（4ヶ月）','企業法務部で契約書レビュー補助','国際仲裁庭で日本代表チームのサポート','公正取引委員会でコンプライアンス体制構築支援'],
+    game:['インディーゲーム開発・Steam配信（累計1万本販売）','大手ゲーム会社のデバッグ・QA業務（8ヶ月）','世界ゲームジャム48時間で3位入賞','任天堂インターンでゲームバランス調整担当'],
+    youtuber:['個人チャンネル運営（登録者12万人・収益化済み）','大手YouTuberのディレクション補助（3ヶ月）','バイラル動画1本で再生5,000万回達成','Shorts専門チャンネルで月間1億再生を記録'],
+    startup:['大学発スタートアップCTO（VC調達5,000万円）','Y Combinatorプログラム参加（日本人史上最年少）','在学中に事業を立ち上げ3億円で売却','Forbes 30 Under 30 Asia 選出'],
     general:['大手商社でビジネス補助（6ヶ月）','外資企業で業務改善補助','社会人チームの学生リーダーとして事業黒字化','ダボス会議ユース代表として参加・発言'],
   },
   prTemplates: {
@@ -1008,6 +1036,9 @@ function generateResume() {
   const age = parseInt(document.getElementById('inAge').value) || 22;
   const job = document.getElementById('inJob').value;
   const strength = document.getElementById('inStrength').value.trim() || 'コミュニケーション能力';
+  const hobby   = document.getElementById('inHobby').value.trim() || '読書';
+  const cert    = document.getElementById('inCert').value.trim() || '';
+  const motiv   = document.getElementById('inMotiv').value.trim() || '成長';
   const type = currentType;
   const bsLevel = type.bsLevel;
 
@@ -1022,7 +1053,15 @@ function generateResume() {
   lastBsScore = bsScore; lastUserName = name;
   const gradYear = age - 4;
 
-  const jobLabels = { consultant:'コンサルタント', engineer:'エンジニア', sales:'営業職', marketing:'マーケター', pm:'プロジェクトマネージャー', finance:'金融アナリスト', general:'総合職' };
+  const jobLabels = {
+    consultant:'コンサルタント', engineer:'エンジニア（バックエンド）',
+    frontend:'エンジニア（フロントエンド）', aiml:'AIエンジニア/データサイエンティスト',
+    sales:'営業職', marketing:'マーケター', pm:'プロジェクトマネージャー',
+    finance:'金融アナリスト', design:'デザイナー（UI/UX）',
+    hr:'人事・採用', law:'法務・コンプライアンス',
+    game:'ゲームクリエイター', youtuber:'YouTuber/クリエイター',
+    startup:'起業家・スタートアップ', general:'総合職',
+  };
   const bsComments = ['就活あるある範囲内（たぶん）','これはちょっと面接で突っ込まれます','面接官「…え？」となるレベルです','もはやファンタジーです。アニメ化を検討してください'];
 
   const resumeBox = document.getElementById('resumeBox');
@@ -1070,6 +1109,30 @@ function generateResume() {
         ${skills.map((s, i) => `<span class="skill-tag ${i >= 4 && bsLevel >= 3 ? 'fake' : ''}">${s}</span>`).join('')}
       </div>
       ${bsLevel >= 3 ? '<div style="font-size:0.7em;color:#c00;margin-top:4px">※赤文字は「習得中」を含む場合があります</div>' : ''}
+    </div>
+
+    <div class="rs">
+      <h3>🏅 趣味・特技</h3>
+      <div class="ri"><div class="yr">-</div><div class="ct"><div class="og">${hobby}${bsLevel >= 2 ? `（${pick(['全国大会優勝経験あり','プロ資格保持者','海外でも高く評価される'])})` : ''}</div></div></div>
+    </div>
+
+    ${cert ? `<div class="rs">
+      <h3>📜 資格・語学</h3>
+      <div class="ri"><div class="yr">-</div><div class="ct"><div class="og">${cert}${bsLevel >= 3 ? `（${pick(['満点取得','2週間で独学合格','最年少記録更新'])})` : ''}</div></div></div>
+      ${bsLevel >= 2 ? `<div class="ri"><div class="yr">-</div><div class="ct"><div class="og">${pick(['TOEIC '+String(700+bsLevel*55)+'点','ビジネス英検1級','中国語HSK6級（最高位）','TOEFLiBT'+String(90+bsLevel*8)+'点'])}</div></div></div>` : ''}
+    </div>` : ''}
+
+    <div class="rs">
+      <h3>💌 志望動機</h3>
+      <div class="pr-box">${(() => {
+        const motivKw = motiv || '成長';
+        const motivTemplates = [
+          `貴社の「${motivKw}」を体現する文化に強く共感しました。私はこれまでの経験で培った${strength}を活かし、貴社のさらなる発展に貢献したいと考えています。`,
+          `「${motivKw}」を追求する中で、貴社こそが私の理想を実現できる場所だと確信しています。入社後は${strength}を武器に、業界常識を覆す成果を出し続けます。`,
+          `${motivKw}への情熱と${strength}の掛け合わせで、貴社にしか生み出せない価値を創造します。${bsLevel >= 3 ? '私のポテンシャルは、入社後3年以内に役員を目指すほどのものです。' : ''}`,
+        ];
+        return pick(motivTemplates);
+      })()}</div>
     </div>
 
     <div class="rs">

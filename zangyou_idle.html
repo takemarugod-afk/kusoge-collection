@@ -395,7 +395,7 @@ body {
   <div class="desk-panel">
     <div class="dp-header">🖥️ デスクパネル</div>
     <div class="dp-grid">
-      <button class="dp-item coffee-rdy" id="dpPhone" onclick="answerPhone()">
+      <button class="dp-item" id="dpPhone" onclick="answerPhone()">
         <div class="dp-icon">📞</div>
         <div class="dp-label">電話</div>
         <div class="dp-state" id="dpPhoneState">待機中</div>
@@ -486,6 +486,7 @@ let G = {
   totalEvents: 0,
   totalChaos: 0,
   running: false,
+  _hint30: false, _hint100: false, _hint300: false,
 };
 
 // タスクリスト（ステージ順）
@@ -1298,24 +1299,18 @@ function updateHUD() {
 // ============================================================
 let lastTick = Date.now();
 let eventTimer = 15 + Math.random() * 10;
-let miniGameTimer = 5 + Math.random() * 3;
+let miniGameTimer = 50 + Math.random() * 30;
 
-function tick() {
-  if (!G.running) { requestAnimationFrame(tick); return; }
-
-  const now = Date.now();
-  const dt = (now - lastTick) / 1000;
-  lastTick = now;
-
-  // ─ デスクパネル更新 ─
+// デスクタイマー（G.runningに関係なく常時動く）
+function updateDeskTimers(dt) {
   // 電話
   if (!DESK.phoneRinging) {
     DESK.phoneTimer -= dt;
     if (DESK.phoneTimer <= 0) {
       DESK.phoneRinging = true;
-      DESK.phoneRingLeft = 4;
-      DESK.phoneTimer = 30 + Math.random() * 20;
-      addLog('📞 電話が鳴っている！すぐ出て！', 'chaos');
+      DESK.phoneRingLeft = 5;
+      DESK.phoneTimer = 25 + Math.random() * 20;
+      addLog('📞 電話が鳴っている！4秒以内に出て！', 'chaos');
       playDeskSound(880, 'square', 0.06);
     }
   } else {
@@ -1323,7 +1318,7 @@ function tick() {
     if (DESK.phoneRingLeft <= 0) {
       DESK.phoneRinging = false;
       G.minute += 8;
-      addLog('📞 電話を逃した…残業時間+8分', 'bad');
+      addLog('📞 電話を逃した…残業+8分ペナルティ！', 'bad');
     }
   }
 
@@ -1331,15 +1326,15 @@ function tick() {
   DESK.mailTimer -= dt;
   if (DESK.mailTimer <= 0 && DESK.mailCount < 5) {
     DESK.mailCount++;
-    DESK.mailTimer = 18 + Math.random() * 10;
-    if (DESK.mailCount >= 3) addLog(`📧 未読メール${DESK.mailCount}件！処理しないと作業が遅れる！`, 'bad');
-    else addLog(`📧 新着メール！（未読${DESK.mailCount}件）`, 'chaos');
+    DESK.mailTimer = 15 + Math.random() * 10;
+    if (DESK.mailCount >= 4) addLog(`📧 未読${DESK.mailCount}件！自動作業-${(DESK.mailCount*0.4).toFixed(1)}/秒のペナルティ！`, 'bad');
+    else addLog(`📧 新着メール（未読${DESK.mailCount}件）`, 'chaos');
   }
 
   // コーヒーCD
   if (!DESK.coffeeReady && DESK.coffeeBoostLeft <= 0) {
     DESK.coffeeCd -= dt;
-    if (DESK.coffeeCd <= 0) { DESK.coffeeReady = true; addLog('☕ コーヒーが準備できた！', 'good'); }
+    if (DESK.coffeeCd <= 0) { DESK.coffeeReady = true; addLog('☕ コーヒーが準備できた！クリックしてパワーUP！', 'good'); }
   }
   if (DESK.coffeeBoostLeft > 0) {
     DESK.coffeeBoostLeft -= dt;
@@ -1356,32 +1351,51 @@ function tick() {
     if (DESK.printerTimer <= 0) {
       DESK.printerOk = false;
       DESK.printerAlertLeft = 10;
-      DESK.printerTimer = 60 + Math.random() * 30;
+      DESK.printerTimer = 55 + Math.random() * 30;
       G.autoWork = Math.max(0, G.autoWork - 5);
-      addLog('🖨️ プリンターが壊れた！10秒以内に修理しないと自動作業−5のまま！', 'bad');
+      addLog('🖨️ プリンターが壊れた！今すぐ🖨️を押して修理！自動作業-5！', 'bad');
       playDeskSound(120, 'sawtooth', 0.1);
     }
   } else if (DESK.printerAlertLeft > 0) {
     DESK.printerAlertLeft -= dt;
     if (DESK.printerAlertLeft <= 0) {
       DESK.printerAlertLeft = 0;
-      addLog('🖨️ 修理チャンス終了…故障中のまま放置されている', 'bad');
+      addLog('🖨️ 修理チャンス終了…いつでも🖨️を押せば直ります', 'bad');
     }
   }
+}
+
+function tick() {
+  const now = Date.now();
+  const dt = Math.min(0.15, (now - lastTick) / 1000);
+  lastTick = now;
+
+  // デスクは常時更新（イベント中でも電話が鳴る！）
+  updateDeskTimers(dt);
+  renderDesk();
+
+  if (!G.running) { requestAnimationFrame(tick); return; }
 
   // 自動作業（メール未読ペナルティ込み）
   const _mailPen = DESK.mailCount * 0.4;
   const _effAuto = Math.max(0, G.autoWork - _mailPen);
   G.work += _effAuto * dt;
   G.progress += _effAuto * dt * 0.5;
-  G.minute += dt * 0.5; // 残業時間加算
+  G.minute += dt * 0.5;
 
-  renderDesk();
+  // 作業量マイルストーン通知
+  if (!G._hint30  && G.work >= 30)  { G._hint30=true;  addLog('💡 作業量30！⚙️アップグレードを購入できます！', 'good'); }
+  if (!G._hint100 && G.work >= 100) { G._hint100=true; addLog('💰 作業量100達成！強化に使おう！', 'good'); }
+  if (!G._hint300 && G.work >= 300) { G._hint300=true; addLog('🔥 作業量300！あなたは謎の強者です', 'chaos'); }
 
-  // ミニゲームタイマー（5〜8秒間隔）
+  // カオス度が高まると残業時間が加速
+  if (G.chaos >= 200) G.minute += dt * 0.2;
+  if (G.chaos >= 400) G.minute += dt * 0.3;
+
+  // ミニゲームタイマー（50〜80秒間隔）
   miniGameTimer -= dt;
   if (miniGameTimer <= 0) {
-    miniGameTimer = 5 + Math.random() * 3;
+    miniGameTimer = 50 + Math.random() * 30;
     triggerMiniGame();
   }
 
