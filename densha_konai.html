@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電車、来ない | 会社系クソゲー集</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh; background: #0a0a16; color: #eee;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 24px; text-align: center;
+}
+.emoji { font-size: 4em; margin-bottom: 16px; animation: sway 3s ease-in-out infinite; }
+@keyframes sway { 0%,100%{transform:rotate(-5deg)} 50%{transform:rotate(5deg)} }
+h1 { font-size: 1.6em; color: #ffd166; margin-bottom: 10px; }
+.desc { font-size: 0.95em; color: #666; line-height: 1.8; max-width: 300px; margin: 0 auto 32px; }
+.badge {
+  display: inline-block; background: #1a1a2e; border: 1px solid #2a2a50;
+  border-radius: 8px; padding: 12px 28px; color: #555; font-size: 0.85em; margin-bottom: 32px;
+}
+.badge span { color: #ffd16680; }
+.back { color: #444; font-size: 0.78em; text-decoration: none; }
+.back:hover { color: #ffd166; }
+
+/* 来そうで来ないボタン */
+.btn-wrap { margin-bottom: 24px; }
+.call-btn {
+  padding: 14px 36px; background: #1e1e38; border: 2px solid #3a3a60;
+  border-radius: 10px; color: #aaa; font-size: 1em; font-family: inherit;
+  cursor: pointer; transition: all 0.1s; position: relative; overflow: hidden;
+}
+.call-btn:hover { border-color: #ffd166; color: #ffd166; transform: translateY(-2px); }
+.call-btn:active { transform: scale(0.97); }
+.status { font-size: 0.85em; color: #555; min-height: 1.4em; margin-top: 10px; transition: color 0.3s; }
+.status.almost { color: #ffd166; }
+.status.nope { color: #e74c3c; }
+.count { font-size: 0.75em; color: #333; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="emoji">🚃</div>
+  <h1>電車、来ない</h1>
+  <p class="desc">ボタンを押すと電車が来そうになる。<br>でも来ない。ひたすら来ない。</p>
+
+  <div class="btn-wrap">
+    <button class="call-btn" id="callBtn" onclick="callTrain()">🔔 電車を呼ぶ</button>
+    <div class="status" id="status">…ホームで待っています</div>
+    <div class="count" id="count"></div>
+  </div>
+
+  <div class="badge"><span>🚧 COMING SOON</span>　フル版準備中です</div>
+  <a class="back" href="index.html">← ゲーム一覧に戻る</a>
+
+<script>
+let tries = 0;
+const MSGS_ALMOST = ['接近中…！','もうすぐ来る…！','来た！？','…来そう！','光が見えた…！','来る、絶対来る…！'];
+const MSGS_NOPE   = ['来なかった。','まだです。','別の電車でした。','通過しました。','なぜ…','来ません。','運転見合わせ中。'];
+function callTrain() {
+  tries++;
+  const st = document.getElementById('status');
+  const isAlmost = Math.random() < 0.6;
+  if (isAlmost) {
+    st.textContent = MSGS_ALMOST[Math.floor(Math.random()*MSGS_ALMOST.length)];
+    st.className = 'status almost';
+    setTimeout(() => {
+      st.textContent = MSGS_NOPE[Math.floor(Math.random()*MSGS_NOPE.length)];
+      st.className = 'status nope';
+    }, 800 + Math.random() * 600);
+  } else {
+    st.textContent = MSGS_NOPE[Math.floor(Math.random()*MSGS_NOPE.length)];
+    st.className = 'status nope';
+  }
+  document.getElementById('count').textContent = `${tries}回目の試み`;
+}
+</script>
+</body>
+</html>
