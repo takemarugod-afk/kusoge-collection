@@ -6,116 +6,319 @@
 <title>プライバシーポリシー | 会社系クソゲー集</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
   min-height: 100vh;
   background: #0a0a16;
-  color: #c8c8d0;
+  color: #c0c0cc;
   font-family: 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
-  line-height: 1.9;
+  line-height: 2;
+  font-size: 15px;
 }
-.wrap { max-width: 700px; margin: 0 auto; padding: 52px 22px 100px; }
 
+/* ── ヘッダー ── */
+.page-header {
+  width: 100%;
+  background: linear-gradient(180deg, #0e0e20 0%, #0a0a16 100%);
+  border-bottom: 1px solid #1a1a30;
+  padding: 44px 20px 36px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.page-header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, #ffd16606 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-badge {
+  display: inline-block;
+  font-size: 0.7em; letter-spacing: 0.12em;
+  color: #ffd166; border: 1px solid #ffd16640;
+  background: #ffd16610; border-radius: 20px;
+  padding: 3px 14px; margin-bottom: 14px;
+}
+.page-header h1 {
+  font-size: clamp(1.3em, 4vw, 1.8em);
+  color: #fff; font-weight: bold;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 24px rgba(255,209,102,0.15);
+  margin-bottom: 8px;
+}
+.header-meta {
+  font-size: 0.75em; color: #44445a; letter-spacing: 0.06em;
+}
+
+/* ── レイアウト ── */
+.wrap {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 48px 22px 100px;
+}
+
+/* ── 戻るリンク ── */
 .back-link {
   display: inline-flex; align-items: center; gap: 6px;
-  color: #ffd166; text-decoration: none; font-size: 0.84em;
-  margin-bottom: 44px; opacity: 0.75; transition: opacity 0.15s;
+  color: #ffd166; text-decoration: none; font-size: 0.82em;
+  margin-bottom: 44px; opacity: 0.65;
+  transition: opacity 0.15s;
 }
 .back-link:hover { opacity: 1; }
 
-h1 { font-size: 1.55em; color: #fff; margin-bottom: 4px; letter-spacing: 0.04em; }
-.updated { font-size: 0.75em; color: #44445a; margin-bottom: 46px; }
+/* ── セクション ── */
+section { margin-bottom: 44px; }
 
 h2 {
-  font-size: 0.95em; color: #ffd166; font-weight: bold;
-  margin: 38px 0 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #1c1c30;
-  letter-spacing: 0.04em;
+  font-size: 0.92em;
+  color: #ffd166;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  padding: 10px 0 10px 14px;
+  border-left: 3px solid #ffd166;
+  margin-bottom: 18px;
+  background: linear-gradient(90deg, #ffd16608 0%, transparent 80%);
 }
-p { color: #8888a0; font-size: 0.88em; margin-bottom: 10px; }
-a { color: #74b9ff; text-decoration: none; }
+h2 .sec-num {
+  opacity: 0.45;
+  margin-right: 8px;
+  font-size: 0.85em;
+}
+
+p {
+  color: #8888a0;
+  font-size: 0.88em;
+  margin-bottom: 10px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 10px;
+}
+ul li {
+  color: #8888a0;
+  font-size: 0.88em;
+  padding: 4px 0 4px 18px;
+  position: relative;
+}
+ul li::before {
+  content: '・';
+  position: absolute; left: 0;
+  color: #ffd16660;
+}
+
+a {
+  color: #74b9ff;
+  text-decoration: none;
+  word-break: break-all;
+}
 a:hover { text-decoration: underline; }
 
+/* ── 情報ボックス ── */
 .info-box {
-  background: #10101e;
-  border: 1px solid #1c1c30;
+  background: #0e0e1e;
+  border: 1px solid #1e1e34;
   border-radius: 10px;
-  padding: 18px 20px;
-  margin-top: 10px;
-  font-size: 0.86em;
-  color: #8888a0;
-  line-height: 1.8;
+  padding: 18px 22px;
+  margin-top: 4px;
+  margin-bottom: 14px;
 }
-.info-box strong { color: #c8c8d0; }
+.info-box dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; }
+.info-box dt { font-size: 0.78em; color: #555; white-space: nowrap; padding-top: 2px; }
+.info-box dd { font-size: 0.85em; color: #c0c0cc; }
 
-.tag {
-  display: inline-block;
-  font-size: 0.72em; padding: 2px 10px;
-  background: #ffd16610; border: 1px solid #ffd16640;
-  color: #ffd166; border-radius: 20px;
-  margin-right: 6px; margin-bottom: 4px;
+/* ── 強調ボックス ── */
+.highlight-box {
+  background: #0e1e0e;
+  border: 1px solid #1e341e;
+  border-left: 3px solid #2ecc71;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
 }
-footer {
-  margin-top: 60px; padding-top: 24px;
+.highlight-box p { color: #7799aa; margin: 0; }
+.highlight-box strong { color: #2ecc71; }
+
+/* ── リンクボックス ── */
+.link-box {
+  background: #0e0e1e;
+  border: 1px solid #1e1e34;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-top: 8px;
+  font-size: 0.84em;
+  color: #8888a0;
+}
+.link-box a { color: #74b9ff; }
+
+/* ── 区切り ── */
+hr { border: none; border-top: 1px solid #14142a; margin: 0 0 44px; }
+
+/* ── フッター ── */
+.page-footer {
+  text-align: center;
+  padding-top: 36px;
   border-top: 1px solid #14142a;
-  font-size: 0.72em; color: #2a2a40; text-align: center;
+  font-size: 0.72em;
+  color: #2a2a40;
+  letter-spacing: 0.06em;
 }
+.page-footer a { color: #333; }
+.page-footer a:hover { color: #ffd166; text-decoration: none; }
 </style>
 </head>
 <body>
+
+<header class="page-header">
+  <div class="header-badge">PRIVACY POLICY</div>
+  <h1>プライバシーポリシー</h1>
+  <div class="header-meta">会社系クソゲー集</div>
+</header>
+
 <div class="wrap">
   <a class="back-link" href="index.html">← ゲーム一覧に戻る</a>
 
-  <h1>プライバシーポリシー</h1>
-  <div class="updated">最終更新日：2025年7月1日</div>
+  <!-- 1. 基本情報 -->
+  <section>
+    <h2><span class="sec-num">1.</span>基本情報</h2>
+    <div class="info-box">
+      <dl>
+        <dt>サイト名</dt>
+        <dd>会社系クソゲー集</dd>
+        <dt>運営者</dt>
+        <dd>個人運営（takemarugod）</dd>
+        <dt>サイトURL</dt>
+        <dd><a href="https://takemarugod-afk.github.io/kusoge-collection/">https://takemarugod-afk.github.io/kusoge-collection/</a></dd>
+        <dt>制定日</dt>
+        <dd>2025年7月1日</dd>
+        <dt>最終更新日</dt>
+        <dd>2025年7月1日</dd>
+      </dl>
+    </div>
+  </section>
 
-  <h2>1. サイト概要</h2>
-  <p>本サイト「<strong style="color:#c8c8d0">会社系クソゲー集</strong>」は、ブラウザで遊べるカジュアルゲームを提供する個人運営のサイトです。</p>
-  <div class="info-box">
-    <strong>サイト名：</strong>会社系クソゲー集<br>
-    <strong>運営者：</strong>個人運営（takemarugod）<br>
-    <strong>URL：</strong><a href="https://takemarugod-afk.github.io/kusoge-collection/">https://takemarugod-afk.github.io/kusoge-collection/</a>
-  </div>
+  <!-- 2. 個人情報の非収集 -->
+  <section>
+    <h2><span class="sec-num">2.</span>個人情報の非収集について</h2>
+    <div class="highlight-box">
+      <p><strong>当サイトは個人情報を一切収集しません。</strong></p>
+    </div>
+    <ul>
+      <li>氏名・メールアドレス・住所・電話番号等の個人情報は一切収集していません</li>
+      <li>会員登録・ログイン機能は存在しません</li>
+      <li>お問い合わせフォームは存在しません</li>
+      <li>ゲームのスコア・プレイ履歴はユーザーの端末内（ブラウザのlocalStorage）にのみ保存されます</li>
+      <li>ゲームデータが運営者のサーバーに送信されることはありません</li>
+    </ul>
+  </section>
 
-  <h2>2. 広告配信（Google AdSense）</h2>
-  <p>当サイトは <span class="tag">Google AdSense</span> を使用して広告を配信しています。</p>
-  <p>Google AdSense は、ユーザーの興味・関心に基づいた広告を表示するために Cookie を使用します。Cookie を通じて収集されるデータは個人を特定するものではありません。</p>
-  <p>詳細は <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">Google の広告ポリシー</a> をご確認ください。</p>
+  <!-- 3. Cookie -->
+  <section>
+    <h2><span class="sec-num">3.</span>Cookieについて</h2>
+    <p>当サイトおよび当サイトが利用する第三者サービスはCookieを使用することがあります。Cookieとはウェブサイトがユーザーのブラウザに保存する小さなテキストファイルです。</p>
+    <ul>
+      <li>Google AdSenseが広告配信のためにCookieを使用します</li>
+      <li>Google Analyticsがアクセス解析のためにCookieを使用する場合があります</li>
+      <li>ユーザーはブラウザの設定からCookieを無効にすることができます</li>
+      <li>Cookie を無効にした場合もゲームのご利用は引き続き可能です</li>
+    </ul>
+  </section>
 
-  <h2>3. Cookie（クッキー）の使用</h2>
-  <p>当サイトおよび当サイトが利用する第三者サービス（Google AdSense・Google Analytics 等）は、Cookie を使用することがあります。</p>
-  <p>Cookie はブラウザに保存される小さなテキストファイルであり、サイトの利便性向上や広告の最適化に使用されます。ブラウザの設定から Cookie を無効化することが可能ですが、一部の機能が正常に動作しない場合があります。</p>
-  <div class="info-box">
-    <strong>当サイトが使用する主な Cookie：</strong><br>
-    ・ゲームの進行データ保存（localStorage / sessionStorage）<br>
-    ・Google AdSense による広告配信<br>
-    ・Google Analytics によるアクセス解析
-  </div>
+  <!-- 4. Google AdSense -->
+  <section>
+    <h2><span class="sec-num">4.</span>Google AdSenseについて</h2>
+    <p>当サイトは、Google Inc.が提供する広告配信サービス「<strong style="color:#c0c0cc">Google AdSense</strong>」を利用しています。</p>
+    <ul>
+      <li>GoogleはCookieを使用して、ユーザーの興味・関心に基づいた広告を表示します</li>
+      <li>GoogleによるCookieの使用はGoogleのプライバシーポリシーに準拠します</li>
+      <li>広告のパーソナライズはGoogleの広告設定ページからオプトアウトできます</li>
+    </ul>
+    <div class="link-box">
+      Googleプライバシーポリシー：<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">https://policies.google.com/privacy</a><br>
+      広告設定ページ：<a href="https://adssettings.google.com/" target="_blank" rel="noopener">https://adssettings.google.com/</a>
+    </div>
+  </section>
 
-  <h2>4. アクセス解析（Google Analytics）</h2>
-  <p>当サイトは <span class="tag">Google Analytics</span> を使用してアクセス状況を分析しています。Google Analytics は Cookie を使用してデータを収集しますが、収集されるデータは匿名であり、個人を特定するものではありません。</p>
-  <p>Google Analytics のデータ収集を無効にするには、<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google アナリティクス オプトアウト アドオン</a>をご利用ください。</p>
+  <!-- 5. Google Analytics -->
+  <section>
+    <h2><span class="sec-num">5.</span>Google Analyticsについて</h2>
+    <p>当サイトはアクセス状況の分析を目的として「<strong style="color:#c0c0cc">Google Analytics</strong>」を使用する場合があります。</p>
+    <ul>
+      <li>Google Analyticsはトラフィックデータの収集のためにCookieを使用します</li>
+      <li>収集されるデータは匿名であり、個人を特定するものではありません</li>
+      <li>収集されたデータはGoogleのプライバシーポリシーに基づき管理されます</li>
+    </ul>
+    <div class="link-box">
+      Google Analyticsのデータ収集を無効にするには、<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Googleアナリティクスオプトアウトアドオン</a>をご利用ください。
+    </div>
+  </section>
 
-  <h2>5. ゲームデータの保存について</h2>
-  <p>各ゲームの進行データはお使いのデバイスの <strong style="color:#c8c8d0">localStorage</strong>（ブラウザ内ストレージ）にのみ保存されます。当サイトのサーバーに個人情報が送信・保存されることはありません。</p>
+  <!-- 6. 広告配信事業者 -->
+  <section>
+    <h2><span class="sec-num">6.</span>広告配信事業者について</h2>
+    <p>当サイトは第三者配信の広告サービスを利用しています。</p>
+    <ul>
+      <li>第三者配信事業者はCookieを使用してユーザーへの広告を配信します</li>
+      <li>当該Cookieはユーザーがそのウェブサイトやインターネット上の他のサイトへアクセスした際の情報に基づいています</li>
+      <li>ユーザーはNetwork Advertising Initiativeのオプトアウトページから第三者配信事業者のCookieを無効にすることができます</li>
+    </ul>
+    <div class="link-box">
+      NAIオプトアウトページ：<a href="https://optout.networkadvertising.org/" target="_blank" rel="noopener">https://optout.networkadvertising.org/</a>
+    </div>
+  </section>
 
-  <h2>6. 免責事項</h2>
-  <p>当サイトのゲームおよびコンテンツはエンターテインメント目的のフィクションです。実在の企業・団体・人物とは一切関係ありません。当サイトの利用により生じた損害について、運営者は責任を負いかねます。</p>
+  <!-- 7. 外部リンク -->
+  <section>
+    <h2><span class="sec-num">7.</span>外部リンクについて</h2>
+    <p>当サイトにはBuy Me a Coffeeなどの外部サービスへのリンクが含まれます。</p>
+    <ul>
+      <li>リンク先のプライバシーポリシーおよび利用規約は各サービスに準拠します</li>
+      <li>当サイトはリンク先サービスの内容・個人情報保護の方針等について責任を負いません</li>
+      <li>外部リンクをクリックする際はご自身の判断でお願いします</li>
+    </ul>
+  </section>
 
-  <h2>7. プライバシーポリシーの変更</h2>
-  <p>本ポリシーは予告なく変更される場合があります。変更後は本ページに最新版を掲載します。</p>
+  <!-- 8. 免責事項 -->
+  <section>
+    <h2><span class="sec-num">8.</span>免責事項</h2>
+    <ul>
+      <li>当サイトのゲームおよびコンテンツは娯楽目的のフィクションであり、実用性・正確性を保証するものではありません</li>
+      <li>当サイトに登場する人物・企業・団体・事件はすべて架空であり、実在のものとは一切関係ありません</li>
+      <li>当サイトの利用により生じたいかなる損害についても、運営者は責任を負いかねます</li>
+      <li>当サイトのコンテンツは予告なく変更・削除される場合があります</li>
+    </ul>
+  </section>
 
-  <h2>8. お問い合わせ</h2>
-  <p>ご意見・不具合報告・お問い合わせは GitHub の Issue からお願いします。</p>
-  <div class="info-box">
-    <strong>GitHub Issues：</strong>
-    <a href="https://github.com/takemarugod-afk/kusoge-collection/issues" target="_blank" rel="noopener">
-      https://github.com/takemarugod-afk/kusoge-collection/issues
-    </a><br>
-    <span style="font-size:0.9em;color:#55556a">（GitHubアカウントがなくても閲覧できます）</span>
-  </div>
+  <!-- 9. ポリシーの変更 -->
+  <section>
+    <h2><span class="sec-num">9.</span>プライバシーポリシーの変更</h2>
+    <ul>
+      <li>本ポリシーは法令の改正やサービス内容の変更に応じて、予告なく変更される場合があります</li>
+      <li>変更後のプライバシーポリシーはこのページに掲載し、掲載をもって効力を生じるものとします</li>
+      <li>重要な変更がある場合は可能な限りお知らせするよう努めます</li>
+    </ul>
+  </section>
 
-  <footer>© 2025 会社系クソゲー集 · 個人運営</footer>
+  <!-- 10. お問い合わせ -->
+  <section>
+    <h2><span class="sec-num">10.</span>お問い合わせ</h2>
+    <p>本ポリシーに関するご質問、不具合のご報告、その他お問い合わせはGitHubのIssueページよりお願いします。</p>
+    <div class="link-box">
+      GitHubリポジトリ（Issue）：<br>
+      <a href="https://github.com/takemarugod-afk/kusoge-collection/issues" target="_blank" rel="noopener">
+        https://github.com/takemarugod-afk/kusoge-collection/issues
+      </a>
+    </div>
+  </section>
+
+  <hr>
+
+  <footer class="page-footer">
+    © 2025 会社系クソゲー集 &nbsp;·&nbsp; 個人運営 &nbsp;·&nbsp;
+    <a href="index.html">ゲーム一覧に戻る</a>
+  </footer>
 </div>
+
 </body>
 </html>
