@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会社系クソゲー集</title>
+
+<!-- ===== Google AdSense ここに貼る =====
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+     crossorigin="anonymous"></script>
+======================================= -->
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: #0a0a16;
+  color: #e0e0e0;
+  font-family: 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── ヘッダー ── */
+header {
+  width: 100%;
+  text-align: center;
+  padding: 52px 20px 36px;
+  background: linear-gradient(180deg, #0e0e20 0%, #0a0a16 100%);
+  border-bottom: 1px solid #1e1e38;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 50%, #ffd16608 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 50%, #a78bfa08 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-badge {
+  display: inline-block;
+  font-size: 0.72em; letter-spacing: 0.12em;
+  color: #ffd166; border: 1px solid #ffd16640;
+  background: #ffd16610; border-radius: 20px;
+  padding: 4px 14px; margin-bottom: 16px;
+}
+header h1 {
+  font-size: clamp(1.5em, 5vw, 2.4em);
+  font-weight: bold; color: #fff;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 30px rgba(255,209,102,0.25);
+  margin-bottom: 10px;
+}
+.catchcopy {
+  font-size: clamp(0.85em, 2.5vw, 1.05em);
+  color: #888;
+  letter-spacing: 0.06em;
+}
+
+/* ── メインコンテンツ ── */
+main {
+  width: 100%;
+  max-width: 960px;
+  padding: 40px 16px 20px;
+}
+
+.section-label {
+  font-size: 0.72em; letter-spacing: 0.12em; color: #555;
+  text-transform: uppercase; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 1px; background: #1e1e38;
+}
+
+/* ── ゲームカードグリッド ── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 700px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 400px) {
+  .cards { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: #10101e;
+  border: 1.5px solid #1e1e38;
+  border-radius: 16px;
+  padding: 24px 20px 22px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(.2,.8,.3,1.1),
+              border-color 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--glow, #ffd166) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.card:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: var(--glow, #ffd166);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px var(--glowbg, rgba(255,209,102,0.12));
+}
+.card:hover::before { opacity: 0.05; }
+.card:active { transform: scale(0.97); }
+
+.card-emoji {
+  font-size: 2.4em;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px var(--glowbg, rgba(255,209,102,0.3)));
+}
+.card-title {
+  font-size: 1em; font-weight: bold; color: #fff;
+  line-height: 1.3;
+}
+.card-desc {
+  font-size: 0.78em; color: #666; line-height: 1.6;
+  flex: 1;
+}
+.card-tag {
+  align-self: flex-start;
+  font-size: 0.68em; padding: 3px 10px;
+  border-radius: 20px; border: 1px solid;
+  border-color: var(--glow, #ffd166);
+  color: var(--glow, #ffd166);
+  background: var(--glowbg, rgba(255,209,102,0.08));
+  letter-spacing: 0.04em;
+}
+.card-arrow {
+  position: absolute; bottom: 18px; right: 18px;
+  font-size: 0.9em; color: #333;
+  transition: color 0.2s, transform 0.2s;
+}
+.card:hover .card-arrow { color: var(--glow, #ffd166); transform: translateX(3px); }
+
+/* ── 広告エリア（将来用） ── */
+.ad-area {
+  width: 100%;
+  max-width: 960px;
+  padding: 0 16px;
+  margin: 28px 0 8px;
+}
+.ad-placeholder {
+  background: #10101e;
+  border: 1px dashed #1e1e38;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  font-size: 0.75em;
+  color: #2a2a44;
+  letter-spacing: 0.06em;
+}
+
+/* ── フッター ── */
+footer {
+  width: 100%;
+  text-align: center;
+  padding: 40px 20px 52px;
+  margin-top: auto;
+  border-top: 1px solid #1a1a2e;
+}
+.bmc-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #ffd166; color: #0a0a16;
+  font-weight: bold; font-size: 0.95em;
+  padding: 13px 28px; border-radius: 50px;
+  text-decoration: none;
+  border: none; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255,209,102,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.bmc-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(255,209,102,0.45);
+}
+.bmc-btn:active { transform: scale(0.97); }
+.footer-copy {
+  margin-top: 20px;
+  font-size: 0.72em; color: #2a2a44;
+  letter-spacing: 0.06em;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">🏢 KUSOGE COLLECTION</div>
+  <h1>会社系クソゲー集</h1>
+  <p class="catchcopy">今日も会社で何かがおかしい</p>
+</header>
+
+<main>
+  <div class="section-label">ゲーム一覧</div>
+  <div class="cards">
+
+    <a class="card" href="kaigi_max.html"
+       style="--glow:#74b9ff; --glowbg:rgba(116,185,255,0.08)">
+      <div class="card-emoji">🏢</div>
+      <div class="card-title">会議は踊る MAX</div>
+      <div class="card-desc">脱線する。空気を読む。根回しする。それでも会議は終わらない。</div>
+      <div class="card-tag">判断ゲーム</div>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <a class="card" href="keihi_hantei_pro (1).html"
+       style="--glow:#ffd166; --glowbg:rgba(255,209,102,0.08)">
+      <div class="card-emoji">📠</div>
+      <div class="card-title">経費で落とせますか？</div>
+      <div class="card-desc">これは経費で落ちるのか？審査官があなたの申請を白日の下にさらす。</div>
+      <div class="card-tag">審査ゲーム</div>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <a class="card" href="resume_chaos.html"
+       style="--glow:#fd79a8; --glowbg:rgba(253,121,168,0.08)">
+      <div class="card-emoji">📄</div>
+      <div class="card-title">嘘つき履歴書ジェネレーター CHAOS</div>
+      <div class="card-desc">あなたの本性が暴かれる性格診断。盛りすぎた職歴が自動生成される。</div>
+      <div class="card-tag">診断ゲーム</div>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <a class="card" href="zangyou_idle.html"
+       style="--glow:#a78bfa; --glowbg:rgba(167,139,250,0.08)">
+      <div class="card-emoji">🌙</div>
+      <div class="card-title">月末の謎残業</div>
+      <div class="card-desc">なぜか仕事が終わらない。謎のイベントが降り続ける。帰れるか？</div>
+      <div class="card-tag">放置ゲーム</div>
+      <span class="card-arrow">→</span>
+    </a>
+
+  </div>
+</main>
+
+<!-- ===== 広告エリア（AdSense設定後にここに貼る） =====
+<div class="ad-area">
+  <ins class="adsbygoogle" style="display:block"
+     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+     data-ad-slot="XXXXXXXXXX"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+================================================== -->
+
+<div class="ad-area">
+  <div class="ad-placeholder">── 広告エリア（Google AdSense） ──</div>
+</div>
+
+<footer>
+  <a class="bmc-btn" href="https://www.buymeacoffee.com/placeholder" target="_blank" rel="noopener">
+    ☕ Buy Me a Coffee
+  </a>
+  <div class="footer-copy">© 2025 会社系クソゲー集 · 今日も残業お疲れ様です</div>
+  <div style="margin-top:10px;font-size:0.7em;color:#2a2a44">
+    <a href="privacy.html" style="color:#444;text-decoration:none">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

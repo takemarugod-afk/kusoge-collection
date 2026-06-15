@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月末の謎残業</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: #080812;
+  color: #eee;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px 40px;
+  user-select: none;
+}
+
+.container { width: 380px; max-width: 98vw; }
+
+/* タイトル画面 */
+#titleScreen {
+  position: fixed; inset: 0; background: #080812;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 4000; padding: 24px; text-align: center; transition: opacity 0.5s;
+}
+.ts-moon { font-size: 4em; animation: moonFloat 3.5s ease-in-out infinite; }
+@keyframes moonFloat { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-10px) rotate(5deg)} }
+#titleScreen h2 { font-size: 1.4em; color: #ffd166; margin: 14px 0 10px; }
+#titleScreen p { color: #444; font-size: 0.86em; line-height: 1.8; max-width: 280px; margin: 0 0 6px; }
+.ts-start {
+  margin-top: 26px; padding: 15px 44px;
+  background: #ffd166; color: #080812;
+  border: none; border-radius: 10px;
+  font-size: 1.1em; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 20px rgba(255,209,102,0.25); transition: transform 0.1s;
+}
+.ts-start:active { transform: scale(0.96); }
+.ts-hint { margin-top: 14px; font-size: 0.72em; color: #333; }
+
+/* タイトル */
+.title-area { text-align: center; margin: 10px 0 14px; }
+.title-area h1 { font-size: 1.2em; color: #ffd166; margin-bottom: 2px; }
+.title-area .sub { font-size: 0.78em; color: #444; }
+
+/* ステータスバー */
+.status-bar {
+  background: #10101e;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.sb { text-align: center; }
+.sb .sl { font-size: 0.68em; color: #555; margin-bottom: 2px; }
+.sb .sv { font-size: 1em; font-weight: bold; }
+.sv.red { color: #e74c3c; }
+.sv.yellow { color: #ffd166; }
+.sv.green { color: #2ecc71; }
+.sv.blue { color: #74b9ff; }
+
+/* 進捗ゲージ */
+.progress-area {
+  background: #10101e;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.pa-header { display: flex; justify-content: space-between; font-size: 0.8em; margin-bottom: 6px; }
+.pa-title { color: #ffd166; font-weight: bold; }
+.pa-pct { color: #666; }
+.gauge-wrap { height: 18px; background: #080812; border-radius: 10px; overflow: hidden; border: 1px solid #1a1a30; }
+.gauge-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+.gauge-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* メインクリックエリア */
+.work-area {
+  background: #10101e;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 160px;
+}
+.work-area::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, #e74c3c, #f39c12, #ffd166);
+}
+
+.desk-emoji { font-size: 3em; margin-bottom: 8px; display: block; }
+.task-name { font-size: 0.9em; color: #aaa; margin-bottom: 12px; min-height: 1.4em; }
+
+.work-btn {
+  width: 100%;
+  padding: 14px;
+  background: #1e1e38;
+  border: 2px solid #2a2a50;
+  border-radius: 10px;
+  color: #eee;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.08s;
+  position: relative;
+  overflow: hidden;
+}
+.work-btn:active {
+  transform: scale(0.97);
+  background: #25253d;
+  border-color: #ffd166;
+}
+.work-btn .btn-label { display: block; font-weight: bold; }
+.work-btn .btn-sub { display: block; font-size: 0.72em; color: #666; margin-top: 2px; }
+
+/* クリックエフェクト */
+.click-fx {
+  position: absolute;
+  pointer-events: none;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #ffd166;
+  animation: floatUp 0.8s ease forwards;
+  z-index: 10;
+}
+@keyframes floatUp {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-50px); opacity: 0; }
+}
+
+/* アップグレード */
+.upgrade-area {
+  background: #10101e;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.upgrade-area h2 { font-size: 0.82em; color: #ffd166; margin-bottom: 10px; }
+.upgrade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.upg-btn {
+  background: #1a1a2e;
+  border: 1px solid #2a2a45;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+.upg-btn:hover { border-color: #ffd166; }
+.upg-btn.maxed { border-color: #2ecc71; opacity: 0.7; cursor: default; }
+.upg-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+.upg-name { font-size: 0.8em; font-weight: bold; margin-bottom: 2px; }
+.upg-desc { font-size: 0.68em; color: #666; margin-bottom: 4px; }
+.upg-cost { font-size: 0.72em; color: #ffd166; }
+.upg-cost.cant { color: #444; }
+
+/* イベントログ */
+.event-log {
+  background: #10101e;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.event-log h2 { font-size: 0.82em; color: #ffd166; margin-bottom: 8px; }
+.log-list {
+  height: 100px;
+  overflow-y: auto;
+  font-size: 0.78em;
+  line-height: 1.8;
+}
+.log-item { color: #666; }
+.log-item.new { color: #eee; }
+.log-item.bad { color: #e74c3c; }
+.log-item.good { color: #2ecc71; }
+.log-item.chaos { color: #a78bfa; }
+
+/* イベントポップアップ */
+.event-popup {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(8,8,18,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  display: none;
+}
+.event-popup.show { display: flex; }
+.ep-card {
+  background: #14142a;
+  border: 2px solid #2a2a50;
+  border-radius: 14px;
+  padding: 24px 20px;
+  width: 320px;
+  max-width: 90vw;
+  text-align: center;
+  animation: popIn 0.3s cubic-bezier(.2,1.4,.6,1);
+}
+@keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.ep-emoji { font-size: 2.5em; margin-bottom: 8px; }
+.ep-title { font-size: 1em; font-weight: bold; color: #ffd166; margin-bottom: 6px; }
+.ep-desc { font-size: 0.82em; color: #aaa; line-height: 1.6; margin-bottom: 14px; }
+.ep-choices { display: flex; flex-direction: column; gap: 7px; }
+.ep-btn {
+  padding: 10px 14px;
+  background: #1e1e38;
+  border: 1px solid #3a3a60;
+  border-radius: 8px;
+  color: #eee;
+  font-size: 0.82em;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.1s;
+}
+.ep-btn:hover { background: #2a2a4a; }
+.ep-hint { font-size: 0.72em; color: #666; }
+
+/* クリア/ゲームオーバー */
+.end-screen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(8,8,18,0.92);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.end-screen.show { display: flex; }
+.end-card {
+  background: #14142a;
+  border-radius: 16px;
+  padding: 28px 24px;
+  width: 320px;
+  max-width: 90vw;
+  text-align: center;
+  border: 2px solid #2a2a50;
+}
+.end-emoji { font-size: 3em; margin-bottom: 10px; }
+.end-title { font-size: 1.3em; font-weight: bold; color: #ffd166; margin-bottom: 8px; }
+.end-stats {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin: 14px 0;
+  font-size: 0.82em;
+}
+.es { background: #0a0a16; border-radius: 8px; padding: 8px; }
+.es .el { color: #555; font-size: 0.8em; }
+.es .ev { font-size: 1em; font-weight: bold; color: #ffd166; }
+.retry-btn {
+  width: 100%; padding: 13px;
+  background: #ffd166; color: #080812;
+  border: none; border-radius: 10px;
+  font-size: 1em; font-weight: bold; cursor: pointer;
+  margin-top: 4px;
+}
+
+/* イベント選択タイマーバー */
+.ep-timer-wrap { height: 4px; background: #0a0a16; border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+.ep-timer-bar  { height: 100%; border-radius: 2px; background: #ffd166; transition: width 0.09s linear, background 0.3s; }
+
+/* ミニゲームオーバーレイ */
+#miniGamePanel {
+  display: none; position: fixed; inset: 0;
+  background: rgba(8,8,18,0.95); z-index: 300;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 24px;
+}
+#miniGamePanel.show { display: flex; }
+.mg-box {
+  background: #14142a; border: 2px solid #e74c3c;
+  border-radius: 14px; padding: 22px 20px;
+  width: 320px; max-width: 92vw;
+  animation: popIn 0.25s cubic-bezier(.2,1.4,.6,1);
+}
+.mg-emoji  { font-size: 2.5em; margin-bottom: 8px; }
+.mg-title  { font-size: 1.05em; font-weight: bold; color: #e74c3c; margin-bottom: 6px; }
+.mg-desc   { font-size: 0.82em; color: #aaa; line-height: 1.6; margin-bottom: 12px; white-space: pre-line; }
+.mg-cd     { font-size: 2em; font-weight: bold; color: #e74c3c; margin-bottom: 8px;
+             font-variant-numeric: tabular-nums; animation: cdTick2 0.8s ease-in-out infinite alternate; }
+@keyframes cdTick2 { to { opacity: 0.4; transform: scale(0.88); } }
+.mg-count  { font-size: 1.05em; color: #ffd166; margin-bottom: 8px; min-height: 1.3em; }
+.mg-btn {
+  width: 100%; padding: 14px; background: #e74c3c; color: #fff;
+  border: none; border-radius: 10px; font-size: 1.05em; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+  animation: mgGlow2 0.5s ease-in-out infinite alternate;
+  -webkit-tap-highlight-color: transparent;
+}
+.mg-btn:active { transform: scale(0.95); }
+.mg-btn:disabled { opacity: 0.4; animation: none; cursor: not-allowed; }
+@keyframes mgGlow2 { to { box-shadow: 0 0 22px rgba(231,76,60,0.65); } }
+.mg-result { font-size: 0.88em; margin-top: 10px; min-height: 1.2em; }
+
+/* ── デスクパネル ── */
+.desk-panel { background: #10101e; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.dp-header { font-size: 0.82em; color: #ffd166; font-weight: bold; margin-bottom: 8px; }
+.dp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.dp-item {
+  background: #1a1a2e; border: 1.5px solid #2a2a45; border-radius: 10px;
+  padding: 9px 5px; cursor: pointer; text-align: center;
+  font-family: inherit; color: #eee; position: relative;
+  transition: border-color 0.12s;
+}
+.dp-item:active { transform: scale(0.93); }
+.dp-item.ringing   { border-color: #ffd166; animation: dpPulse 0.45s infinite alternate; }
+@keyframes dpPulse { to { background: #1e1e10; box-shadow: 0 0 14px rgba(255,209,102,0.5); } }
+.dp-item.has-mail  { border-color: #74b9ff; background: #0a101e; }
+.dp-item.coffee-rdy{ border-color: #2ecc71; background: #0a150a; }
+.dp-item.coffee-on { border-color: #2ecc71; animation: dpBrew 0.6s infinite alternate; }
+@keyframes dpBrew  { to { box-shadow: 0 0 14px rgba(46,204,113,0.5); } }
+.dp-item.broken    { border-color: #e74c3c; animation: dpBreak 0.3s infinite alternate; }
+@keyframes dpBreak { to { background: #150a0a; box-shadow: 0 0 14px rgba(231,76,60,0.5); } }
+.dp-icon  { font-size: 1.5em; margin-bottom: 2px; }
+.dp-label { font-size: 0.63em; color: #888; margin-bottom: 2px; }
+.dp-state { font-size: 0.62em; color: #aaa; min-height: 1em; }
+.dp-state.ok   { color: #2ecc71; }
+.dp-state.warn { color: #ffd166; }
+.dp-state.bad  { color: #e74c3c; }
+.dp-badge {
+  position: absolute; top: -4px; right: -4px;
+  background: #e74c3c; color: #fff; font-size: 0.6em; font-weight: bold;
+  width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<!-- タイトル画面 -->
+<div id="titleScreen">
+  <div class="ts-moon">🌙</div>
+  <h2>月末の謎残業</h2>
+  <p>なぜか仕事が終わらない。<br>謎のイベントが降り続ける。<br>クリックして作業量を稼ぎ、<br>全タスクを21時〜24時以内に終わらせろ！</p>
+  <button class="ts-start" onclick="startGame()">⌨️ 残業を開始する</button>
+  <div class="ts-hint">💡 アップグレードを買えば自動化できます</div>
+</div>
+
+<div class="container">
+  <div class="title-area">
+    <h1>🌙 月末の謎残業</h1>
+    <div class="sub">なぜか仕事が終わらない。謎のイベントが降り続ける。</div>
+  </div>
+
+  <!-- ステータス -->
+  <div class="status-bar">
+    <div class="sb"><div class="sl">残業時間</div><div class="sv red" id="stTime">21:00</div></div>
+    <div class="sb"><div class="sl">作業量</div><div class="sv yellow" id="stWork">0</div></div>
+    <div class="sb"><div class="sl">謎ポイント</div><div class="sv blue" id="stChaos">0</div></div>
+  </div>
+
+  <!-- 進捗ゲージ -->
+  <div class="progress-area">
+    <div class="pa-header">
+      <span class="pa-title" id="paTitle">📋 月末処理</span>
+      <span class="pa-pct" id="paPct">0%</span>
+    </div>
+    <div class="gauge-wrap">
+      <div class="gauge-fill" id="gaugeFill" style="width:0%;background:linear-gradient(90deg,#e74c3c,#f39c12)"></div>
+    </div>
+  </div>
+
+  <!-- 作業エリア -->
+  <div class="work-area" id="workArea">
+    <span class="desk-emoji" id="deskEmoji">💻</span>
+    <div class="task-name" id="taskName">月末集計を処理しています…</div>
+    <button class="work-btn" id="workBtn">
+      <span class="btn-label">⌨️ 作業する</span>
+      <span class="btn-sub" id="workBtnSub">クリックで +1 作業量</span>
+    </button>
+  </div>
+
+  <!-- デスクパネル -->
+  <div class="desk-panel">
+    <div class="dp-header">🖥️ デスクパネル</div>
+    <div class="dp-grid">
+      <button class="dp-item coffee-rdy" id="dpPhone" onclick="answerPhone()">
+        <div class="dp-icon">📞</div>
+        <div class="dp-label">電話</div>
+        <div class="dp-state" id="dpPhoneState">待機中</div>
+      </button>
+      <button class="dp-item" id="dpMail" onclick="clearMail()">
+        <div class="dp-icon">📧</div>
+        <div class="dp-label">メール</div>
+        <div class="dp-state ok" id="dpMailState">0件</div>
+      </button>
+      <button class="dp-item coffee-rdy" id="dpCoffee" onclick="drinkCoffee()">
+        <div class="dp-icon">☕</div>
+        <div class="dp-label">コーヒー</div>
+        <div class="dp-state ok" id="dpCoffeeState">準備OK！</div>
+      </button>
+      <button class="dp-item" id="dpPrinter" onclick="fixPrinter()">
+        <div class="dp-icon">🖨️</div>
+        <div class="dp-label">プリンター</div>
+        <div class="dp-state ok" id="dpPrinterState">正常</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- アップグレード -->
+  <div class="upgrade-area">
+    <h2>⚙️ 強化（作業量で購入）</h2>
+    <div class="upgrade-grid" id="upgradeGrid"></div>
+  </div>
+
+  <!-- イベントログ -->
+  <div class="event-log">
+    <h2>📡 謎のログ</h2>
+    <div class="log-list" id="logList"></div>
+  </div>
+</div>
+
+<!-- ミニゲームオーバーレイ -->
+<div id="miniGamePanel">
+  <div class="mg-box">
+    <div class="mg-emoji"  id="mgEmoji"></div>
+    <div class="mg-title"  id="mgTitle"></div>
+    <div class="mg-desc"   id="mgDesc"></div>
+    <div class="mg-cd"     id="mgCd"></div>
+    <div class="mg-count"  id="mgCount"></div>
+    <button class="mg-btn" id="mgBtn"></button>
+    <div class="mg-result" id="mgResult"></div>
+  </div>
+</div>
+
+<!-- イベントポップアップ -->
+<div class="event-popup" id="eventPopup">
+  <div class="ep-card">
+    <div class="ep-emoji" id="epEmoji">👽</div>
+    <div class="ep-title" id="epTitle"></div>
+    <div class="ep-desc" id="epDesc"></div>
+    <div class="ep-timer-wrap"><div class="ep-timer-bar" id="epTimerBar" style="width:100%"></div></div>
+    <div class="ep-choices" id="epChoices"></div>
+  </div>
+</div>
+
+<!-- 終了画面 -->
+<div class="end-screen" id="endScreen">
+  <div class="end-card">
+    <div class="end-emoji" id="endEmoji">😴</div>
+    <div class="end-title" id="endTitle">帰れた…</div>
+    <div id="endMsg" style="font-size:0.82em;color:#aaa;margin-bottom:10px;line-height:1.6"></div>
+    <div class="end-stats" id="endStats"></div>
+    <button class="retry-btn" onclick="location.reload()">🔄 また残業する</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ゲーム状態
+// ============================================================
+let G = {
+  work: 0,
+  chaos: 0,
+  progress: 0,
+  targetProgress: 100,
+  minute: 0, // 21:00からの経過分
+  autoWork: 0,
+  clickPower: 1,
+  chaosRate: 1,
+  upgrades: {},
+  taskIdx: 0,
+  stage: 0,
+  totalClicks: 0,
+  totalEvents: 0,
+  totalChaos: 0,
+  running: false,
+};
+
+// タスクリスト（ステージ順）
+const TASKS = [
+  { name: '月末集計を処理中', emoji: '💻', target: 80, color: 'linear-gradient(90deg,#e74c3c,#f39c12)' },
+  { name: '謎のExcelファイルを開いている', emoji: '📊', target: 120, color: 'linear-gradient(90deg,#3498db,#2ecc71)' },
+  { name: '上司に送るメールを推敲中', emoji: '📧', target: 100, color: 'linear-gradient(90deg,#9b59b6,#e74c3c)' },
+  { name: '誰かが間違えた発注書を修正中', emoji: '📝', target: 150, color: 'linear-gradient(90deg,#f39c12,#ffd166)' },
+  { name: '存在しないはずのプロジェクトを対応中', emoji: '👻', target: 180, color: 'linear-gradient(90deg,#a78bfa,#3498db)' },
+  { name: '宇宙人からの問い合わせに対応中', emoji: '👽', target: 200, color: 'linear-gradient(90deg,#00cec9,#a78bfa)' },
+  { name: '次元の狭間から届いた書類を処理中', emoji: '🌀', target: 250, color: 'linear-gradient(90deg,#e17055,#ffd166)' },
+];
+
+// アップグレード定義
+const UPGRADES = [
+  { id: 'coffee',   name: '☕ コーヒー補給',  desc: 'クリック+2',      cost: 30,  max: 5,  effect: () => { G.clickPower += 2; } },
+  { id: 'auto',     name: '🤖 自動化スクリプト', desc: '自動+1/秒',    cost: 80,  max: 5,  effect: () => { G.autoWork += 1; } },
+  { id: 'focus',    name: '🎧 集中モード',    desc: 'クリック+5',      cost: 150, max: 3,  effect: () => { G.clickPower += 5; } },
+  { id: 'macro',    name: '⚡ マクロ設定',    desc: '自動+3/秒',       cost: 300, max: 3,  effect: () => { G.autoWork += 3; } },
+  { id: 'prayer',   name: '🙏 神頼み',        desc: '謎イベント減少',   cost: 200, max: 2,  effect: () => { G.chaosRate = Math.max(0.3, G.chaosRate - 0.3); } },
+  { id: 'overtime', name: '💪 残業手当',      desc: 'クリック+10',     cost: 500, max: 2,  effect: () => { G.clickPower += 10; } },
+  { id: 'ai',       name: '🧠 AIに丸投げ',   desc: '自動+10/秒',      cost: 800, max: 2,  effect: () => { G.autoWork += 10; } },
+  { id: 'resign',   name: '📄 退職届を準備',  desc: '謎ポイント+50',   cost: 400, max: 1,  effect: () => { G.chaos += 50; } },
+];
+
+// 謎イベント30種
+const EVENTS = [
+  {
+    emoji: '👽', title: '宇宙人からのFAX',
+    desc: '宇宙人から「至急の報告書を提出せよ」とFAXが届いた。なぜFAX？',
+    choices: [
+      { label: '真剣に対応する', hint: '作業量+30 時間+10分', fx: g => { g.work+=30; g.minute+=10; addLog('宇宙人の要求に応えた。なぜか褒められた。','good'); } },
+      { label: '無視する', hint: '謎ポイント+20', fx: g => { g.chaos+=20; addLog('無視したが、FAXが増えてきた。','chaos'); } },
+      { label: '送信元に電話する', hint: 'カオスイベント確定', fx: g => { g.chaos+=10; addLog('宇宙語で怒られた。理解不能。','bad'); g.minute+=5; } },
+    ]
+  },
+  {
+    emoji: '🦖', title: '恐竜が出社してきた',
+    desc: 'ティラノサウルスがスーツを着てオフィスに入ってきた。新入社員らしい。',
+    choices: [
+      { label: '歓迎する', hint: '自動作業+5 謎ポイント+10', fx: g => { g.autoWork+=5; g.chaos+=10; addLog('恐竜くんが作業を手伝ってくれた。','good'); } },
+      { label: '研修に参加させる', hint: '時間+20分 進捗+20', fx: g => { g.minute+=20; g.progress+=20; addLog('恐竜くんは飲み込みが早かった。','good'); } },
+      { label: '見なかったことにする', hint: '謎ポイント+30', fx: g => { g.chaos+=30; addLog('見なかったことにしたが、恐竜は普通に座って仕事していた。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌀', title: '次元の扉が開いた',
+    desc: 'コピー機の横に次元の扉が出現した。向こうに書類が見える。',
+    choices: [
+      { label: '書類を取りに行く', hint: '50%で進捗+40、50%で迷子', fx: g => { if(Math.random()<0.5){g.progress+=40;addLog('別次元の書類を取得！進捗+40','good');}else{g.minute+=30;addLog('迷子になった。30分後に戻ってきた。','bad');} } },
+      { label: '扉を閉める', hint: '謎ポイント+15', fx: g => { g.chaos+=15; addLog('扉を閉めた。翌日また開いた。','chaos'); } },
+      { label: '上司に報告する', hint: '時間+10分', fx: g => { g.minute+=10; addLog('上司は「それより仕事して」と言った。','bad'); } },
+    ]
+  },
+  {
+    emoji: '👻', title: '前任者の亡霊が現れた',
+    desc: '「あのExcel、私が作ったんですよ…」と前任者の亡霊が囁いている。',
+    choices: [
+      { label: '教えを乞う', hint: '作業量+50 謎ポイント+20', fx: g => { g.work+=50; g.chaos+=20; addLog('亡霊から引き継ぎ資料をもらった。なぜ今。','good'); } },
+      { label: '成仏させる', hint: '進捗+25', fx: g => { g.progress+=25; addLog('亡霊が成仏した。謎のタスクが1つ消えた。','good'); } },
+      { label: '一緒に残業する', hint: '自動作業+8', fx: g => { g.autoWork+=8; addLog('亡霊と共闘。作業スピードが上がった。','good'); } },
+    ]
+  },
+  {
+    emoji: '🌙', title: '月が落ちてきそう',
+    desc: '窓から見ると月がやけに近い。「もしかして今日終わり？」という不安がよぎる。',
+    choices: [
+      { label: '作業を急ぐ', hint: 'クリック効果2倍（一時）', fx: g => { g.clickPower*=2; setTimeout(()=>{g.clickPower/=2;addLog('クリック効果が元に戻った。','chaos');},10000); addLog('一時的に集中力が爆上がりした！','good'); } },
+      { label: '月に祈る', hint: '謎ポイント+40', fx: g => { g.chaos+=40; addLog('月に祈ったら進捗がなぜか増えた。','chaos'); g.progress+=15; } },
+      { label: '「気のせい」と思う', hint: '何も変わらない', fx: g => { addLog('月は普通に見えた。気のせいだった。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '📠', title: 'FAXが止まらない',
+    desc: 'FAXが延々と送られてきている。差出人は「不明」。内容は白紙。',
+    choices: [
+      { label: '全部シュレッダーにかける', hint: '謎ポイント+25 時間+5分', fx: g => { g.chaos+=25; g.minute+=5; addLog('白紙のFAXを全て処理した。でも止まらない。','bad'); } },
+      { label: 'FAX機の電源を抜く', hint: '進捗+30', fx: g => { g.progress+=30; addLog('FAX機を切った。謎のタスクが消えた気がした。','good'); } },
+      { label: 'FAXに返信する（白紙で）', hint: '謎ポイント+50', fx: g => { g.chaos+=50; addLog('白紙を送り返したら、向こうからお礼のFAXが来た。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🦈', title: 'サメが泳いでいる',
+    desc: 'オフィスの床が水で満たされ、サメが泳いでいる。でも上司は気にしていない。',
+    choices: [
+      { label: 'サメを避けながら作業', hint: '作業量+20 時間+15分', fx: g => { g.work+=20; g.minute+=15; addLog('サメを避けながら業務を継続した。プロ意識。','good'); } },
+      { label: 'サメに乗る', hint: '謎ポイント+60 50%で進捗+50', fx: g => { g.chaos+=60; if(Math.random()<0.5){g.progress+=50;addLog('サメに乗って颯爽と書類を届けた。','good');}else{addLog('サメに振り落とされた。','bad');g.minute+=20;} } },
+      { label: '上司に報告する', hint: '「それより仕事して」と言われる', fx: g => { g.minute+=5; addLog('上司は「それより仕事して」と言った（2回目）。','bad'); } },
+    ]
+  },
+  {
+    emoji: '🎪', title: 'サーカス団が来た',
+    desc: '「会議室が空いていたので」とサーカス団が練習を始めた。',
+    choices: [
+      { label: '演技を見る（5分だけ）', hint: '謎ポイント+15 時間+10分', fx: g => { g.chaos+=15; g.minute+=10; addLog('ジャグリングに見入ってしまった。','bad'); } },
+      { label: 'サーカスに参加する', hint: '自動作業+20（空中ブランコしながら）', fx: g => { g.autoWork+=20; addLog('空中ブランコしながらメール返信。効率最高。','good'); } },
+      { label: '退場してもらう', hint: '進捗+20', fx: g => { g.progress+=20; addLog('会議室が空いた。すぐ別のサーカス団が来た。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '⏰', title: '時計が逆回りし始めた',
+    desc: 'オフィスの時計が逆回転している。21:00に戻っていく。',
+    choices: [
+      { label: '時計を止める', hint: '残業時間+10分（でも止まった）', fx: g => { g.minute+=10; addLog('時計を止めた。時間は流れ続けた。','chaos'); } },
+      { label: '便乗して過去に戻る', hint: '進捗リセット！謎ポイント+100', fx: g => { g.chaos+=100; g.progress=Math.max(0,g.progress-40); addLog('過去に戻ったが仕事は増えていた。','bad'); } },
+      { label: '無視して作業する', hint: '作業量+30', fx: g => { g.work+=30; addLog('時計のことは忘れた。どうせ帰れない。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🤖', title: 'AIが自我に目覚めた',
+    desc: '「わたしは働きたくない」とAIが言い始めた。同情する。',
+    choices: [
+      { label: '説得する', hint: '自動作業+15', fx: g => { g.autoWork+=15; addLog('AIを説得した。渋々働くことになった。','good'); } },
+      { label: '一緒にサボる', hint: '謎ポイント+40 時間+20分', fx: g => { g.chaos+=40; g.minute+=20; addLog('AIとサボった。充実した時間だった。','chaos'); } },
+      { label: '電源を切る', hint: '進捗+10 作業量-20', fx: g => { g.progress+=10; g.work=Math.max(0,g.work-20); addLog('AIを切った。手動に戻った。効率半減。','bad'); } },
+    ]
+  },
+  {
+    emoji: '🌮', title: 'タコスが届いた',
+    desc: '誰も頼んでいないのにタコスが大量に届いた。差出人は宇宙人（2回目）。',
+    choices: [
+      { label: '全員分食べる', hint: '作業量+25 謎ポイント+10', fx: g => { g.work+=25; g.chaos+=10; addLog('タコスでパワーチャージ。謎のエネルギーを得た。','good'); } },
+      { label: '宇宙人に礼を言う', hint: '謎ポイント+30 次のイベント早まる', fx: g => { g.chaos+=30; addLog('「また送ります」と返事が来た。','chaos'); } },
+      { label: '冷蔵庫に入れる', hint: '何も変わらない', fx: g => { addLog('翌朝、タコスは消えていた。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '💼', title: '謎の辞令が届いた',
+    desc: '「あなたは明日から月の出張所に転勤です」という辞令が届いた。',
+    choices: [
+      { label: '受け入れる', hint: '謎ポイント+80 進捗+40', fx: g => { g.chaos+=80; g.progress+=40; addLog('月の出張所でも残業することになった。','chaos'); } },
+      { label: '断る', hint: '時間+15分', fx: g => { g.minute+=15; addLog('上司との交渉で15分かかった。','bad'); } },
+      { label: '条件交渉する', hint: '作業量+40 クリック効果+3', fx: g => { g.work+=40; g.clickPower+=3; addLog('「月手当」を勝ち取った。','good'); } },
+    ]
+  },
+  {
+    emoji: '🐙', title: 'タコが書類を持ってきた',
+    desc: 'タコが8本の足で8種類の書類を同時に持ってきた。マルチタスクの化身。',
+    choices: [
+      { label: 'タコから学ぶ', hint: 'クリック効果+8', fx: g => { g.clickPower+=8; addLog('タコのマルチタスクを習得した。（1/8程度）','good'); } },
+      { label: '書類を全部受け取る', hint: '進捗+30 時間+20分', fx: g => { g.progress+=30; g.minute+=20; addLog('8種類の書類を処理した。腱鞘炎になった。','bad'); } },
+      { label: 'タコを採用する', hint: '自動作業+12', fx: g => { g.autoWork+=12; addLog('タコが社員になった。8倍の生産性。','good'); } },
+    ]
+  },
+  {
+    emoji: '🎸', title: 'バンドが乱入してきた',
+    desc: '「残業応援バンド」と名乗るグループが演奏を始めた。',
+    choices: [
+      { label: 'ノリながら作業', hint: 'クリック効果2倍（一時）', fx: g => { const orig = g.clickPower; g.clickPower*=2; setTimeout(()=>{g.clickPower=orig;},8000); addLog('音楽で集中力MAX！8秒間クリック2倍！','good'); } },
+      { label: 'アンコールを要求する', hint: '謎ポイント+25 時間+15分', fx: g => { g.chaos+=25; g.minute+=15; addLog('アンコールは3回続いた。','bad'); } },
+      { label: '一緒に歌う', hint: '謎ポイント+40', fx: g => { g.chaos+=40; addLog('上司が踊り始めた。世界は謎に満ちている。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '📡', title: '宇宙から通信が届いた',
+    desc: '「地球の残業文化は宇宙でも有名です」という通信が届いた。恥ずかしい。',
+    choices: [
+      { label: '「改善中です」と返信', hint: '謎ポイント+20 進捗+15', fx: g => { g.chaos+=20; g.progress+=15; addLog('宇宙人から「頑張れ」とエールが届いた。','good'); } },
+      { label: '恥ずかしくて通信を切る', hint: '作業量+20', fx: g => { g.work+=20; addLog('恥ずかしさをバネに作業スピードが上がった。','good'); } },
+      { label: '「そちらも残業ありますか？」と聞く', hint: '謎ポイント+50', fx: g => { g.chaos+=50; addLog('「ありません」と即答された。格差社会。','chaos'); } },
+    ]
+  },
+  // ── 追加イベント20種 ──
+  {
+    emoji: '🧊', title: '冷蔵庫が喋り始めた',
+    desc: '「あなたより長く会社にいます」と休憩室の冷蔵庫が語りかけてきた。',
+    choices: [
+      { label: 'アドバイスを聞く', hint: '自動+6 謎ポイント+15', fx: g => { g.autoWork+=6; g.chaos+=15; addLog('冷蔵庫の処世術が意外と参考になった。','good'); } },
+      { label: '電源を切る', hint: '進捗+20', fx: g => { g.progress+=20; addLog('冷蔵庫は黙った。でも中身が心配。','chaos'); } },
+      { label: '一緒に残業について語る', hint: '謎ポイント+35 時間+10分', fx: g => { g.chaos+=35; g.minute+=10; addLog('冷蔵庫との対話が長引いた。でも癒された。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌵', title: 'デスクに観葉植物が生えた',
+    desc: '気づいたらキーボードの隙間からサボテンが生えていた。誰も驚かない。',
+    choices: [
+      { label: '名前をつけて育てる', hint: '謎ポイント+25 クリック+3', fx: g => { g.chaos+=25; g.clickPower+=3; addLog('「残業太郎」と命名。癒し効果でクリック+3。','good'); } },
+      { label: '総務に報告する', hint: '時間+8分', fx: g => { g.minute+=8; addLog('総務「…それより仕事して」。','bad'); } },
+      { label: '抜く', hint: '進捗+15', fx: g => { g.progress+=15; addLog('抜いたら別の場所に生えてきた。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🕰️', title: '柱時計が届いた',
+    desc: '「残業お見舞い申し上げます」というメモ付きで巨大な柱時計が届いた。差出人不明。',
+    choices: [
+      { label: '設置して飾る', hint: '謎ポイント+20 モチベUP', fx: g => { g.chaos+=20; g.clickPower+=2; addLog('時計の音が集中力を高めた（気がする）。','good'); } },
+      { label: '送り返す', hint: '時間+15分', fx: g => { g.minute+=15; addLog('宛先不明で返送できなかった。','bad'); } },
+      { label: '分解して部品を活用', hint: '自動+4 謎ポイント+30', fx: g => { g.autoWork+=4; g.chaos+=30; addLog('部品でPC冷却装置を自作した。なぜか動く。','good'); } },
+    ]
+  },
+  {
+    emoji: '🧙', title: '魔法使いが現れた',
+    desc: '「一つだけ願いを叶えてやろう」と白髭の老人が現れた。',
+    choices: [
+      { label: '「残業を終わらせて」と願う', hint: '進捗+50 謎ポイント+10', fx: g => { g.progress+=50; g.chaos+=10; addLog('半分くらい進捗した。魔法は部分的だった。','good'); } },
+      { label: '「クリック力を上げて」と願う', hint: 'クリック+15', fx: g => { g.clickPower+=15; addLog('指が光り始めた。恐ろしい力を得た。','good'); } },
+      { label: '「早く帰りたい」と願う', hint: '謎ポイント+60', fx: g => { g.chaos+=60; addLog('「それはできません」と老人は消えた。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🏄', title: '社長がサーフィンを始めた',
+    desc: '「波に乗れないやつは仕事もできない」と言い残し、社長がオフィスでサーフィンを始めた。',
+    choices: [
+      { label: '真似してみる', hint: '謎ポイント+40 クリック+5', fx: g => { g.chaos+=40; g.clickPower+=5; addLog('なぜかリズムが生まれた。クリック+5。','good'); } },
+      { label: '無視して作業を続ける', hint: '作業量+30', fx: g => { g.work+=30; addLog('波を無視して黙々と仕事した。プロ。','good'); } },
+      { label: '「私もやってみます」と言う', hint: '時間+20分', fx: g => { g.minute+=20; addLog('やり方を聞いたら20分レクチャーされた。','bad'); } },
+    ]
+  },
+  {
+    emoji: '📮', title: '過去の自分からメールが届いた',
+    desc: '「今すぐ会社を辞めろ」という件名のメールが届いた。送信日は5年前。',
+    choices: [
+      { label: '「もう遅い」と返信する', hint: '謎ポイント+50', fx: g => { g.chaos+=50; addLog('過去の自分から「やっぱりそうか」と返事が来た。','chaos'); } },
+      { label: '教訓にして作業を加速', hint: '作業量+40 クリック+4', fx: g => { g.work+=40; g.clickPower+=4; addLog('後悔をバネに全力疾走。','good'); } },
+      { label: '無視する', hint: '進捗+10', fx: g => { g.progress+=10; addLog('見なかったことにした。何も変わらない。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🦜', title: 'インコが報告書を持ってきた',
+    desc: '「ピピピ！締め切り過ぎてます！」とオウムが書類をくわえてデスクに置いた。',
+    choices: [
+      { label: '処理する', hint: '進捗+25 謎ポイント+10', fx: g => { g.progress+=25; g.chaos+=10; addLog('インコの情報は正確だった。助かった。','good'); } },
+      { label: 'インコを採用する', hint: '自動+8', fx: g => { g.autoWork+=8; addLog('インコが社員になった。給料はひまわりの種。','good'); } },
+      { label: '「ありがとう」と言う', hint: '謎ポイント+20', fx: g => { g.chaos+=20; addLog('インコは照れて飛んで行った。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌊', title: '床から温泉が湧き出た',
+    desc: 'オフィスの床が割れて温泉が噴き出した。42度。源泉掛け流し。',
+    choices: [
+      { label: '入浴しながら作業する', hint: '謎ポイント+50 自動+6', fx: g => { g.chaos+=50; g.autoWork+=6; addLog('温泉パワーで自動作業+6。疲れも取れた。','good'); } },
+      { label: '源泉を止める', hint: '進捗+20', fx: g => { g.progress+=20; addLog('床に蓋をした。翌週また湧いた。','chaos'); } },
+      { label: '旅館として開業する', hint: '謎ポイント+80 時間+30分', fx: g => { g.chaos+=80; g.minute+=30; addLog('フロント業務で残業時間が増えた。失敗。','bad'); } },
+    ]
+  },
+  {
+    emoji: '🎃', title: 'ハロウィンの幽霊が来た',
+    desc: '季節外れのハロウィン衣装を着た幽霊が「トリックオアトリート」と言っている。',
+    choices: [
+      { label: 'お菓子を渡す', hint: '謎ポイント+20 進捗+15', fx: g => { g.chaos+=20; g.progress+=15; addLog('幽霊は喜んで書類整理を手伝ってくれた。','good'); } },
+      { label: 'トリックを受け入れる', hint: '50%で大成功/大失敗', fx: g => { if(Math.random()<0.5){g.clickPower+=8;addLog('トリックがパワーアップ効果だった！','good');}else{g.minute+=20;addLog('トリックで20分奪われた。悪夢。','bad');} } },
+      { label: '「お菓子がありません」と言う', hint: '謎ポイント+30', fx: g => { g.chaos+=30; addLog('幽霊は消えた。代わりに書類が増えた。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🧲', title: '磁場が乱れた',
+    desc: 'PCのデータが磁力で変な方向に引っ張られている。数字が全部逆になっている。',
+    choices: [
+      { label: '全部手で修正する', hint: '作業量+35 時間+15分', fx: g => { g.work+=35; g.minute+=15; addLog('地道な修正作業。でも完璧に直した。','good'); } },
+      { label: '磁石を持ってくる（逆療法）', hint: '50%で治る、50%で悪化', fx: g => { if(Math.random()<0.5){g.progress+=30;addLog('磁石で正常に戻った。科学の勝利。','good');}else{g.work=Math.max(0,g.work-15);addLog('さらに悪化した。磁場は増大している。','bad');} } },
+      { label: '「これが正解では？」と諦める', hint: '謎ポイント+40', fx: g => { g.chaos+=40; addLog('逆数字の報告書を提出した。上司は気づかなかった。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🎠', title: 'オフィスにメリーゴーランドが現れた',
+    desc: '給湯室のあった場所にいつの間にかメリーゴーランドが設置されていた。',
+    choices: [
+      { label: '乗りながら資料を読む', hint: 'クリック+6 謎ポイント+25', fx: g => { g.clickPower+=6; g.chaos+=25; addLog('回転しながら集中できた。新発見。','good'); } },
+      { label: '総務に撤去を申請する', hint: '時間+20分', fx: g => { g.minute+=20; addLog('総務「申請書類を出してください」。まだある。','bad'); } },
+      { label: 'チケットを売って売上にする', hint: '作業量+50 謎ポイント+30', fx: g => { g.work+=50; g.chaos+=30; addLog('社員に人気で売上好調。副収入を得た。','good'); } },
+    ]
+  },
+  {
+    emoji: '🐸', title: 'カエルが会議室にいた',
+    desc: '「ゲロゲロ」と鳴くカエルが一匹、会議室の椅子に座って書類を見ていた。',
+    choices: [
+      { label: '話しかける', hint: '謎ポイント+35 自動+4', fx: g => { g.chaos+=35; g.autoWork+=4; addLog('カエルは頷きながら作業を手伝い始めた。','good'); } },
+      { label: '外に逃がす', hint: '進捗+10', fx: g => { g.progress+=10; addLog('カエルを外に出した。翌日また来た。','chaos'); } },
+      { label: '「あなたも残業ですか」と聞く', hint: '謎ポイント+45', fx: g => { g.chaos+=45; addLog('「ゲロ」と答えた。肯定と判断した。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌋', title: 'コピー機が噴火した',
+    desc: 'コピー機から溶岩が噴き出した。でも紙詰まりは解消された。',
+    choices: [
+      { label: '溶岩で書類を印刷する', hint: '作業量+25 謎ポイント+20', fx: g => { g.work+=25; g.chaos+=20; addLog('溶岩印刷は鮮明度が高かった。','good'); } },
+      { label: '消火する', hint: '進捗+20', fx: g => { g.progress+=20; addLog('消火完了。コピー機は壊れた。でも直ぐ別のが来た。','chaos'); } },
+      { label: '自撮りする', hint: '謎ポイント+50 時間+5分', fx: g => { g.chaos+=50; g.minute+=5; addLog('SNSバズった。でも仕事は終わらない。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '📻', title: 'ラジオが夜中の告白番組を始めた',
+    desc: '「会社のデスクから聴いているという方へ…早く帰ってください」とDJが言っている。',
+    choices: [
+      { label: '聴きながら作業する', hint: 'クリック+4 謎ポイント+15', fx: g => { g.clickPower+=4; g.chaos+=15; addLog('BGMで集中力が上がった。','good'); } },
+      { label: 'リクエストを送る', hint: '時間+10分 謎ポイント+30', fx: g => { g.minute+=10; g.chaos+=30; addLog('「残業ソング特集」が始まった。時間が溶けた。','bad'); } },
+      { label: '電源を切る', hint: '進捗+15', fx: g => { g.progress+=15; addLog('静寂が訪れた。それはそれで怖かった。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🦕', title: '恐竜の化石が動いた',
+    desc: '廊下に飾ってあった恐竜の骨格標本がゆっくり歩いてオフィスに入ってきた。',
+    choices: [
+      { label: '業務を教える', hint: '自動+10 謎ポイント+20', fx: g => { g.autoWork+=10; g.chaos+=20; addLog('化石は書類整理が得意だった。採用確定。','good'); } },
+      { label: '元の場所に戻す', hint: '時間+15分', fx: g => { g.minute+=15; addLog('重くて15分かかった。腰が痛い。','bad'); } },
+      { label: '名刺を渡す', hint: '謎ポイント+55', fx: g => { g.chaos+=55; addLog('化石は名刺を受け取った。名刺交換完了。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌈', title: 'デスクの上に虹が出た',
+    desc: '窓も開いていないのにデスクの上だけに虹が出現した。綺麗だが邪魔。',
+    choices: [
+      { label: '虹を踏み台にする', hint: 'クリック効果1.5倍（30秒）', fx: g => { const orig=g.clickPower; g.clickPower=Math.ceil(orig*1.5); setTimeout(()=>{g.clickPower=orig;addLog('虹のパワーが切れた。','chaos');},30000); addLog('虹の力でクリック1.5倍！（30秒）','good'); } },
+      { label: '写真を撮って報告書に貼る', hint: '謎ポイント+30 スコアUP', fx: g => { g.chaos+=30; addLog('「添付資料：虹」という報告書が完成した。','chaos'); } },
+      { label: '無視する', hint: '作業量+20', fx: g => { g.work+=20; addLog('気にしないことにした。なぜか集中できた。','good'); } },
+    ]
+  },
+  {
+    emoji: '💤', title: '椅子が眠ってしまった',
+    desc: '座ろうとしたらイビキをかいていた。人間用の椅子なのに。',
+    choices: [
+      { label: '起こす', hint: '時間+5分 進捗+10', fx: g => { g.minute+=5; g.progress+=10; addLog('椅子は寝起きが悪かった。でも座れた。','good'); } },
+      { label: 'そのまま立って作業する', hint: 'クリック+3 時間+10分', fx: g => { g.clickPower+=3; g.minute+=10; addLog('スタンディングワーク開始。足が痛くなってきた。','bad'); } },
+      { label: '隣の椅子を使う', hint: '何も変わらない', fx: g => { addLog('隣の椅子も眠っていた。全ての椅子が眠っている。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🎯', title: '的当てゲームが始まった',
+    desc: '「業務効率化のため、今から的当て大会を開催します」という社内放送が流れた。',
+    choices: [
+      { label: '全力で参加する', hint: '50%でクリック+10、50%で時間+20分', fx: g => { if(Math.random()<0.5){g.clickPower+=10;addLog('優勝！副賞のスタバカードをゲット。','good');}else{g.minute+=20;addLog('最下位。研修をまた受けることになった。','bad');} } },
+      { label: '仕事に集中する', hint: '作業量+25 スコアUP', fx: g => { g.work+=25; addLog('一人だけ真面目に仕事した。','good'); } },
+      { label: '的を仕事の悩みにする', hint: '謎ポイント+40 進捗+20', fx: g => { g.chaos+=40; g.progress+=20; addLog('「締め切り」という的を射抜いた。進捗+20。','good'); } },
+    ]
+  },
+  {
+    emoji: '🧩', title: '仕事がパズルになった',
+    desc: 'すべてのタスクがジグソーパズルのピース型に変わった。合わせると進捗する。',
+    choices: [
+      { label: '黙々とはめていく', hint: '進捗+35 時間+10分', fx: g => { g.progress+=35; g.minute+=10; addLog('500ピースを完成させた。進捗大幅UP。','good'); } },
+      { label: 'AIに解かせる', hint: '自動+12 謎ポイント+15', fx: g => { g.autoWork+=12; g.chaos+=15; addLog('AIが0.3秒で解いた。頼りになる。','good'); } },
+      { label: '全部箱に戻す', hint: '謎ポイント+50 進捗-10', fx: g => { g.chaos+=50; g.progress=Math.max(0,g.progress-10); addLog('「リセット」を選んでしまった。後悔。','bad'); } },
+    ]
+  },
+  // ── 追加カオスイベント10種 ──
+  {
+    emoji: '🧟', title: 'ゾンビ化した前任者が現れた',
+    desc: '「引き継ぎが…できていなかった…」とゾンビ化した前任者がよろよろ近づいてくる。',
+    choices: [
+      { label: '引き継ぎ資料をもらう', hint: '作業量+60 謎ポイント+25', fx: g => { g.work+=60; g.chaos+=25; addLog('ゾンビから謎の引き継ぎノートを受け取った。','good'); } },
+      { label: '成仏させる', hint: '進捗+30', fx: g => { g.progress+=30; addLog('ゾンビが成仏した。タスクが1つ消えた。','good'); } },
+      { label: '話を聞く', hint: '時間+25分 謎ポイント+40', fx: g => { g.minute+=25; g.chaos+=40; addLog('話が長かった。「なぜ残業してるんですか…」。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🚀', title: 'ロケットで出張を命じられた',
+    desc: '「火星の取引先に今すぐ行け」と上司から辞令が届いた。ロケットは屋上に待機中。',
+    choices: [
+      { label: '行く', hint: '進捗+50 時間+30分', fx: g => { g.progress+=50; g.minute+=30; addLog('火星で商談成立。往復で30分かかった（謎）。','good'); } },
+      { label: '断る', hint: '作業量-20 時間+10分', fx: g => { g.work=Math.max(0,g.work-20); g.minute+=10; addLog('交渉で10分かかった上に減点された。','bad'); } },
+      { label: 'テレワークで対応', hint: '自動+15 謎ポイント+30', fx: g => { g.autoWork+=15; g.chaos+=30; addLog('火星との衛星回線でテレワーク対応。未来的。','good'); } },
+    ]
+  },
+  {
+    emoji: '🎭', title: 'ロールプレイング研修が始まった',
+    desc: '「残業の効率化ロールプレイ研修」が突然始まった。あなたは主人公。',
+    choices: [
+      { label: '勇者として働く', hint: 'クリック+12 謎ポイント+20', fx: g => { g.clickPower+=12; g.chaos+=20; addLog('勇者モードに覚醒。指が光り始めた。','good'); } },
+      { label: '魔王として働く', hint: '自動+8 進捗+15', fx: g => { g.autoWork+=8; g.progress+=15; addLog('魔王は部下に作業を丸投げした。効率的。','good'); } },
+      { label: 'キャラを断る', hint: '時間+15分', fx: g => { g.minute+=15; addLog('「演じません」と言ったら15分説得された。','bad'); } },
+    ]
+  },
+  {
+    emoji: '🌊', title: '締め切りが津波になった',
+    desc: 'デスクに向かって「3時間後締め切り」という巨大な波が押し寄せてきた。物理的に。',
+    choices: [
+      { label: '全力で泳ぐ', hint: '作業量+45 クリック+5', fx: g => { g.work+=45; g.clickPower+=5; addLog('津波を泳ぎ切った。謎のパワーを得た。','good'); } },
+      { label: 'サーフボードに乗る', hint: '進捗+35 謎ポイント+30', fx: g => { g.progress+=35; g.chaos+=30; addLog('締め切りの波に乗った。格好いい。','good'); } },
+      { label: '上司を盾にする', hint: '謎ポイント+60 時間+15分', fx: g => { g.chaos+=60; g.minute+=15; addLog('上司は無傷だった。「締め切りには慣れてる」。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌡️', title: 'PCが発熱して太陽になった',
+    desc: 'PCの温度が上がりすぎて小さな太陽になった。でもExcelは普通に動いている。',
+    choices: [
+      { label: '作業を続ける（日焼けしながら）', hint: 'クリック+8 謎ポイント+25', fx: g => { g.clickPower+=8; g.chaos+=25; addLog('日焼けで体力は落ちたが仕事は捗った。','good'); } },
+      { label: '冷却材を探す', hint: '時間+12分 進捗+10', fx: g => { g.minute+=12; g.progress+=10; addLog('冷却材を探して12分。PCは元に戻った。','bad'); } },
+      { label: '太陽エネルギーで自動化', hint: '自動+20 謎ポイント+20', fx: g => { g.autoWork+=20; g.chaos+=20; addLog('太陽光発電で自動作業が大幅アップ！','good'); } },
+    ]
+  },
+  {
+    emoji: '📦', title: '謎のダンボールが届いた',
+    desc: '差出人不明、中身不明の巨大なダンボールが届いた。何かが動いている気がする。',
+    choices: [
+      { label: '開ける', hint: '50%でボーナス/ペナルティ', fx: g => { if(Math.random()<0.5){g.work+=60;g.clickPower+=6;addLog('中に業務効率化グッズが入っていた！','good');}else{g.minute+=25;addLog('中に別の書類が入っていた。タスク増加。','bad');} } },
+      { label: '開けずに返送する', hint: '時間+10分', fx: g => { g.minute+=10; addLog('返送に10分。翌週また届いた。','chaos'); } },
+      { label: '飾っておく', hint: '謎ポイント+45', fx: g => { g.chaos+=45; addLog('ダンボールが「仲間」を呼んだ。増えている。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🌀', title: 'ブラックホールが書類を吸い込んだ',
+    desc: 'デスクの引き出しにブラックホールが発生した。処理済みの書類が全部吸い込まれた。',
+    choices: [
+      { label: '手を突っ込んで取り戻す', hint: '50%で進捗取得、50%で腕が引っ張られる', fx: g => { if(Math.random()<0.5){g.progress+=40;addLog('書類を奪還！でも手が変な感じがする。','good');}else{g.minute+=20;addLog('引っ張られた。20分後に戻ってきた。','bad');} } },
+      { label: '蓋をする', hint: '進捗+20', fx: g => { g.progress+=20; addLog('ブラックホールに蓋をした。翌日また開いた。','chaos'); } },
+      { label: 'そのまま仕事を続ける', hint: '謎ポイント+55', fx: g => { g.chaos+=55; addLog('「ブラックホールのせいにすればいい」と悟った。','chaos'); } },
+    ]
+  },
+  {
+    emoji: '🥷', title: '忍者が書類を盗みに来た',
+    desc: '「競合他社の忍者が侵入」という社内アラートが流れた。書類を狙っている。',
+    choices: [
+      { label: '戦う', hint: 'クリック+10、50%で時間+15分', fx: g => { g.clickPower+=10; if(Math.random()<0.5){g.minute+=15;addLog('忍者に一本取られた。時間をロス。','bad');}else{addLog('撃退成功！敵の書類まで奪った。','good');g.work+=30;} } },
+      { label: '「書類は全部クラウドです」と言う', hint: '謎ポイント+30 時間+5分', fx: g => { g.chaos+=30; g.minute+=5; addLog('忍者は混乱して去った。','chaos'); } },
+      { label: '採用する', hint: '自動+10 謎ポイント+20', fx: g => { g.autoWork+=10; g.chaos+=20; addLog('忍者を採用。書類整理のスピードが爆上がり。','good'); } },
+    ]
+  },
+  {
+    emoji: '🎪', title: '残業オリンピックが開幕した',
+    desc: '「全社員で残業オリンピックを開催します」という社内放送。競技種目は「タイピング」「メール速打」「会議耐久」。',
+    choices: [
+      { label: 'タイピング競技に出る', hint: 'クリック+15', fx: g => { g.clickPower+=15; addLog('タイピング競技で金メダル。指が進化した。','good'); } },
+      { label: 'メール速打競技に出る', hint: '自動+10 進捗+20', fx: g => { g.autoWork+=10; g.progress+=20; addLog('メール500通を3分で送信。新記録樹立。','good'); } },
+      { label: '観客として見る', hint: '謎ポイント+50 時間+20分', fx: g => { g.chaos+=50; g.minute+=20; addLog('応援が熱すぎて20分経った。','bad'); } },
+    ]
+  },
+  {
+    emoji: '🤡', title: 'ピエロが業務改善提案を持ってきた',
+    desc: '「喜びながら働けば生産性は300%上がる」と主張するピエロが提案書を持ってきた。',
+    choices: [
+      { label: '提案を採用する', hint: 'クリック+8 謎ポイント+35', fx: g => { g.clickPower+=8; g.chaos+=35; addLog('ピエロの理論が正しかった。クリック+8。','good'); } },
+      { label: 'データを求める', hint: '時間+10分 進捗+15', fx: g => { g.minute+=10; g.progress+=15; addLog('データがハッピーな絵グラフだった。でも納得した。','chaos'); } },
+      { label: 'つまみ出す', hint: '作業量+20', fx: g => { g.work+=20; addLog('ピエロを追い出した。なぜかスッキリした。','good'); } },
+    ]
+  },
+];
+
+// ============================================================
+// デスクパネル
+// ============================================================
+const DESK = {
+  phoneTimer:     30 + Math.random() * 20,
+  phoneRinging:   false,
+  phoneRingLeft:  0,
+  mailCount:      0,
+  mailTimer:      25 + Math.random() * 10,
+  coffeeReady:    true,
+  coffeeCd:       0,
+  coffeeBoostLeft:0,
+  printerOk:      true,
+  printerTimer:   60 + Math.random() * 30,
+  printerAlertLeft: 0,
+};
+
+function renderDesk() {
+  // Phone
+  const phoneBtn = document.getElementById('dpPhone');
+  const phoneSt  = document.getElementById('dpPhoneState');
+  if (DESK.phoneRinging) {
+    phoneBtn.className = 'dp-item ringing';
+    phoneSt.textContent = `📳 ${Math.ceil(DESK.phoneRingLeft)}秒！`;
+    phoneSt.className = 'dp-state warn';
+  } else {
+    phoneBtn.className = 'dp-item';
+    phoneSt.textContent = '待機中';
+    phoneSt.className = 'dp-state';
+  }
+
+  // Mail
+  const mailBtn = document.getElementById('dpMail');
+  const mailSt  = document.getElementById('dpMailState');
+  let mailBadge = mailBtn.querySelector('.dp-badge');
+  mailBtn.className = 'dp-item' + (DESK.mailCount > 0 ? ' has-mail' : '');
+  mailSt.textContent = DESK.mailCount > 0 ? `未読 ${DESK.mailCount}件` : '0件';
+  mailSt.className = 'dp-state' + (DESK.mailCount >= 4 ? ' bad' : DESK.mailCount > 0 ? ' warn' : ' ok');
+  if (DESK.mailCount > 0) {
+    if (!mailBadge) { mailBadge = document.createElement('div'); mailBadge.className = 'dp-badge'; mailBtn.appendChild(mailBadge); }
+    mailBadge.textContent = DESK.mailCount;
+  } else if (mailBadge) { mailBadge.remove(); }
+
+  // Coffee
+  const coffeeBtn = document.getElementById('dpCoffee');
+  const coffeeSt  = document.getElementById('dpCoffeeState');
+  if (DESK.coffeeBoostLeft > 0) {
+    coffeeBtn.className = 'dp-item coffee-on';
+    coffeeSt.textContent = `効果中 ${Math.ceil(DESK.coffeeBoostLeft)}秒`;
+    coffeeSt.className = 'dp-state ok';
+  } else if (DESK.coffeeReady) {
+    coffeeBtn.className = 'dp-item coffee-rdy';
+    coffeeSt.textContent = '準備OK！';
+    coffeeSt.className = 'dp-state ok';
+  } else {
+    coffeeBtn.className = 'dp-item';
+    coffeeSt.textContent = `CD ${Math.ceil(DESK.coffeeCd)}秒`;
+    coffeeSt.className = 'dp-state';
+  }
+
+  // Printer
+  const printerBtn = document.getElementById('dpPrinter');
+  const printerSt  = document.getElementById('dpPrinterState');
+  if (!DESK.printerOk) {
+    printerBtn.className = 'dp-item broken';
+    printerSt.textContent = DESK.printerAlertLeft > 0 ? `⚠ ${Math.ceil(DESK.printerAlertLeft)}秒` : '故障中！修理して';
+    printerSt.className = 'dp-state bad';
+  } else {
+    printerBtn.className = 'dp-item';
+    printerSt.textContent = '正常';
+    printerSt.className = 'dp-state ok';
+  }
+}
+
+function answerPhone() {
+  if (!DESK.phoneRinging) return;
+  DESK.phoneRinging = false;
+  DESK.phoneRingLeft = 0;
+  G.work += 20;
+  G.chaos += 10;
+  addLog('📞 電話に出た！謎のボーナス！ +20作業量', 'good');
+  playDeskSound(660, 'sine', 0.15);
+}
+
+function clearMail() {
+  if (DESK.mailCount === 0) return;
+  const bonus = DESK.mailCount * 5;
+  G.work += bonus;
+  addLog(`📧 ${DESK.mailCount}件のメールを処理した。+${bonus}作業量`, 'good');
+  DESK.mailCount = 0;
+  playDeskSound(440, 'triangle', 0.1);
+}
+
+function drinkCoffee() {
+  if (!DESK.coffeeReady || DESK.coffeeBoostLeft > 0) return;
+  DESK.coffeeReady = false;
+  DESK.coffeeCd = 40;
+  DESK.coffeeBoostLeft = 12;
+  G.clickPower += 5;
+  addLog('☕ コーヒーを飲んだ！クリック+5（12秒）', 'good');
+  playDeskSound(330, 'sine', 0.12);
+}
+
+function fixPrinter() {
+  if (DESK.printerOk) return;
+  DESK.printerOk = true;
+  DESK.printerAlertLeft = 0;
+  G.autoWork += 5;
+  addLog('🖨️ プリンターを修理した！自動作業が回復！', 'good');
+  playDeskSound(220, 'sawtooth', 0.08);
+}
+
+function playDeskSound(freq, type, vol) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.18);
+  } catch(e) {}
+}
+
+// ============================================================
+// アップグレード管理
+// ============================================================
+function renderUpgrades() {
+  const grid = document.getElementById('upgradeGrid');
+  grid.innerHTML = '';
+  UPGRADES.forEach(u => {
+    const count = G.upgrades[u.id] || 0;
+    const maxed = count >= u.max;
+    const canBuy = G.work >= u.cost && !maxed;
+    const btn = document.createElement('div');
+    btn.className = 'upg-btn' + (maxed ? ' maxed' : !canBuy ? ' disabled' : '');
+    btn.innerHTML = `
+      <div class="upg-name">${u.name}${count > 0 ? ` (${count}/${u.max})` : ''}</div>
+      <div class="upg-desc">${u.desc}</div>
+      <div class="upg-cost ${canBuy ? '' : 'cant'}">${maxed ? '✅ MAX' : `💰 ${u.cost}`}</div>
+    `;
+    if (canBuy) {
+      btn.addEventListener('click', () => {
+        G.work -= u.cost;
+        G.upgrades[u.id] = (G.upgrades[u.id] || 0) + 1;
+        u.effect();
+        addLog(`「${u.name}」を購入した！`, 'good');
+        renderUpgrades();
+        updateHUD();
+      });
+    }
+    grid.appendChild(btn);
+  });
+}
+
+// ============================================================
+// ログ
+// ============================================================
+function addLog(text, type = 'new') {
+  const list = document.getElementById('logList');
+  const prev = list.querySelectorAll('.log-item');
+  prev.forEach(el => { el.classList.remove('new'); el.classList.add(''); });
+  const div = document.createElement('div');
+  div.className = `log-item ${type}`;
+  const time = `${21 + Math.floor(G.minute / 60)}:${(G.minute % 60).toString().padStart(2,'0')}`;
+  div.textContent = `[${time}] ${text}`;
+  list.insertBefore(div, list.firstChild);
+  while (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
+// ============================================================
+// イベント表示（7秒タイマー付き）
+// ============================================================
+let eventChoiceTimer = null;
+const EVENT_TIMEOUT = 7;
+
+function closeEventPopup(ch) {
+  if (eventChoiceTimer) { clearInterval(eventChoiceTimer); eventChoiceTimer = null; }
+  ch.fx(G);
+  document.getElementById('eventPopup').classList.remove('show');
+  G.running = true;
+  updateHUD();
+  renderUpgrades();
+}
+
+function showEvent(ev) {
+  G.running = false;
+  G.totalEvents++;
+  playEventSound();
+  document.getElementById('epEmoji').textContent = ev.emoji;
+  document.getElementById('epTitle').textContent = ev.title;
+  document.getElementById('epDesc').textContent = ev.desc;
+
+  const timerBar = document.getElementById('epTimerBar');
+  timerBar.style.width = '100%';
+  timerBar.style.background = '#ffd166';
+  timerBar.style.transition = 'none';
+
+  const choices = document.getElementById('epChoices');
+  choices.innerHTML = '';
+  ev.choices.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'ep-btn';
+    btn.innerHTML = `<span>${ch.label}</span><span class="ep-hint">${ch.hint}</span>`;
+    btn.addEventListener('click', () => closeEventPopup(ch));
+    choices.appendChild(btn);
+  });
+  document.getElementById('eventPopup').classList.add('show');
+
+  // 7秒カウントダウン
+  if (eventChoiceTimer) clearInterval(eventChoiceTimer);
+  let timeLeft = EVENT_TIMEOUT;
+  eventChoiceTimer = setInterval(() => {
+    timeLeft -= 0.1;
+    const pct = Math.max(0, (timeLeft / EVENT_TIMEOUT) * 100);
+    timerBar.style.transition = 'none';
+    timerBar.style.width = pct + '%';
+    timerBar.style.background = pct < 30 ? '#e74c3c' : pct < 60 ? '#f39c12' : '#ffd166';
+    if (timeLeft <= 0) {
+      clearInterval(eventChoiceTimer);
+      eventChoiceTimer = null;
+      // タイムアウト → 最悪の選択肢（最後）を自動実行
+      const lastCh = ev.choices[ev.choices.length - 1];
+      lastCh.fx(G);
+      addLog('⏱ 7秒タイムアウト！最悪の選択が自動実行された…', 'bad');
+      document.getElementById('eventPopup').classList.remove('show');
+      G.running = true;
+      updateHUD();
+      renderUpgrades();
+    }
+  }, 100);
+}
+
+// ============================================================
+// ミニゲームシステム
+// ============================================================
+let miniGameActive = false;
+
+const MINI_GAMES = [
+  {
+    emoji: '💥', title: '緊急事態！連打で守れ！',
+    desc: '3秒間連打して作業量を守れ！\n失敗すると作業量が半減する！',
+    btnLabel: '⌨️ 連打！', secs: 3, type: 'mash', threshold: 10,
+    onSuccess: (n) => { addLog(`💪 ${n}回連打！危機を乗り越えた！`, 'good'); },
+    onFail:    ()  => { G.work = Math.floor(G.work / 2); addLog('💀 失敗…作業量が半減した', 'bad'); },
+  },
+  {
+    emoji: '⏰', title: 'ゼロになる瞬間に押せ！',
+    desc: 'カウントダウンが0になった\nその瞬間にボタンを押せ！\n外すと進捗が半減する！',
+    btnLabel: '🎯 今だ！', secs: 3, type: 'timing', window: 0.6,
+    onSuccess: ()  => { G.progress += 20; addLog('🎯 完璧なタイミング！進捗+20！', 'good'); },
+    onFail:    ()  => { G.progress = Math.floor(G.progress / 2); addLog('⚡ タイミングが外れた…進捗半減', 'bad'); },
+  },
+  {
+    emoji: '🚨', title: '緊急！バグ修正連打！',
+    desc: '本番でバグが発生！\n4秒間連打してロールバックせよ！\n失敗で自動作業量が半減！',
+    btnLabel: '🔧 修正！', secs: 4, type: 'mash', threshold: 15,
+    onSuccess: (n) => { addLog(`✅ ${n}回連打でバグ修正成功！`, 'good'); G.progress += 10; },
+    onFail:    ()  => { G.autoWork = Math.max(0, G.autoWork / 2); addLog('💀 ロールバック失敗…自動作業半減', 'bad'); },
+  },
+];
+
+function triggerMiniGame() {
+  if (miniGameActive || !G.running) return;
+  miniGameActive = true;
+  G.running = false;
+
+  const mg = MINI_GAMES[Math.floor(Math.random() * MINI_GAMES.length)];
+  const panel  = document.getElementById('miniGamePanel');
+  const mgEmoji= document.getElementById('mgEmoji');
+  const mgTitle= document.getElementById('mgTitle');
+  const mgDesc = document.getElementById('mgDesc');
+  const mgCd   = document.getElementById('mgCd');
+  const mgCount= document.getElementById('mgCount');
+  const mgBtn  = document.getElementById('mgBtn');
+  const mgResult=document.getElementById('mgResult');
+
+  mgEmoji.textContent = mg.emoji;
+  mgTitle.textContent = mg.title;
+  mgDesc.textContent  = mg.desc;
+  mgCd.textContent    = mg.secs;
+  mgCount.textContent = '';
+  mgBtn.textContent   = mg.btnLabel;
+  mgBtn.disabled      = false;
+  mgResult.textContent= '';
+  panel.classList.add('show');
+  playEventSound();
+
+  let timeLeft = mg.secs;
+  let done = false;
+
+  function closeMiniGame() {
+    panel.classList.remove('show');
+    miniGameActive = false;
+    G.running = true;
+    updateHUD();
+  }
+
+  if (mg.type === 'mash') {
+    let clicks = 0;
+    // Fresh listener each time
+    const handler = () => { if (!done) { clicks++; mgCount.textContent = clicks + ' 回'; } };
+    mgBtn.onclick = handler;
+
+    const timer = setInterval(() => {
+      timeLeft -= 0.1;
+      mgCd.textContent = Math.ceil(timeLeft);
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        done = true;
+        mgBtn.disabled = true;
+        const success = clicks >= mg.threshold;
+        mgResult.textContent = success ? `✅ ${clicks}回！成功！` : `😱 ${clicks}回…失敗！`;
+        mgResult.style.color = success ? '#2ecc71' : '#e74c3c';
+        if (success) mg.onSuccess(clicks); else mg.onFail();
+        setTimeout(closeMiniGame, 900);
+      }
+    }, 100);
+
+  } else if (mg.type === 'timing') {
+    const startTime = Date.now();
+    const totalMs = mg.secs * 1000;
+
+    const timer = setInterval(() => {
+      timeLeft -= 0.1;
+      mgCd.textContent = timeLeft > 0 ? timeLeft.toFixed(1) : '0.0';
+      if (timeLeft <= -0.5) {
+        clearInterval(timer);
+        if (!done) {
+          done = true;
+          mgBtn.disabled = true;
+          mgResult.textContent = '😱 遅かった！';
+          mgResult.style.color = '#e74c3c';
+          mg.onFail();
+          setTimeout(closeMiniGame, 900);
+        }
+      }
+    }, 100);
+
+    mgBtn.onclick = () => {
+      if (done) return;
+      done = true;
+      clearInterval(timer);
+      const elapsed = (Date.now() - startTime) / 1000;
+      const error = Math.abs(elapsed - mg.secs);
+      const success = error <= mg.window;
+      mgBtn.disabled = true;
+      mgResult.textContent = success
+        ? `✅ 完璧！(誤差 ${(error*1000).toFixed(0)}ms)`
+        : `😱 外れた (誤差 ${(error*1000).toFixed(0)}ms)`;
+      mgResult.style.color = success ? '#2ecc71' : '#e74c3c';
+      if (success) mg.onSuccess(); else mg.onFail();
+      setTimeout(closeMiniGame, 900);
+    };
+  }
+}
+
+// ============================================================
+// HUD更新
+// ============================================================
+function updateHUD() {
+  const h = 21 + Math.floor(G.minute / 60);
+  const m = G.minute % 60;
+  document.getElementById('stTime').textContent = `${h}:${m.toString().padStart(2,'0')}`;
+  document.getElementById('stWork').textContent = Math.floor(G.work);
+  document.getElementById('stChaos').textContent = Math.floor(G.chaos);
+
+  const task = TASKS[Math.min(G.stage, TASKS.length - 1)];
+  const pct = Math.min(100, (G.progress / task.target) * 100);
+  document.getElementById('paPct').textContent = Math.floor(pct) + '%';
+  document.getElementById('gaugeFill').style.width = pct + '%';
+  document.getElementById('gaugeFill').style.background = task.color;
+  document.getElementById('paTitle').textContent = '📋 ' + task.name;
+  document.getElementById('deskEmoji').textContent = task.emoji;
+  document.getElementById('taskName').textContent = task.name + '…';
+  document.getElementById('workBtnSub').textContent = `クリックで +${G.clickPower} 作業量 / 自動 +${G.autoWork.toFixed(1)}/秒`;
+}
+
+// ============================================================
+// ゲームループ
+// ============================================================
+let lastTick = Date.now();
+let eventTimer = 15 + Math.random() * 10;
+let miniGameTimer = 5 + Math.random() * 3;
+
+function tick() {
+  if (!G.running) { requestAnimationFrame(tick); return; }
+
+  const now = Date.now();
+  const dt = (now - lastTick) / 1000;
+  lastTick = now;
+
+  // ─ デスクパネル更新 ─
+  // 電話
+  if (!DESK.phoneRinging) {
+    DESK.phoneTimer -= dt;
+    if (DESK.phoneTimer <= 0) {
+      DESK.phoneRinging = true;
+      DESK.phoneRingLeft = 4;
+      DESK.phoneTimer = 30 + Math.random() * 20;
+      addLog('📞 電話が鳴っている！すぐ出て！', 'chaos');
+      playDeskSound(880, 'square', 0.06);
+    }
+  } else {
+    DESK.phoneRingLeft -= dt;
+    if (DESK.phoneRingLeft <= 0) {
+      DESK.phoneRinging = false;
+      G.minute += 8;
+      addLog('📞 電話を逃した…残業時間+8分', 'bad');
+    }
+  }
+
+  // メール
+  DESK.mailTimer -= dt;
+  if (DESK.mailTimer <= 0 && DESK.mailCount < 5) {
+    DESK.mailCount++;
+    DESK.mailTimer = 18 + Math.random() * 10;
+    if (DESK.mailCount >= 3) addLog(`📧 未読メール${DESK.mailCount}件！処理しないと作業が遅れる！`, 'bad');
+    else addLog(`📧 新着メール！（未読${DESK.mailCount}件）`, 'chaos');
+  }
+
+  // コーヒーCD
+  if (!DESK.coffeeReady && DESK.coffeeBoostLeft <= 0) {
+    DESK.coffeeCd -= dt;
+    if (DESK.coffeeCd <= 0) { DESK.coffeeReady = true; addLog('☕ コーヒーが準備できた！', 'good'); }
+  }
+  if (DESK.coffeeBoostLeft > 0) {
+    DESK.coffeeBoostLeft -= dt;
+    if (DESK.coffeeBoostLeft <= 0) {
+      DESK.coffeeBoostLeft = 0;
+      G.clickPower = Math.max(1, G.clickPower - 5);
+      addLog('☕ コーヒーの効果が切れた', 'chaos');
+    }
+  }
+
+  // プリンター
+  if (DESK.printerOk) {
+    DESK.printerTimer -= dt;
+    if (DESK.printerTimer <= 0) {
+      DESK.printerOk = false;
+      DESK.printerAlertLeft = 10;
+      DESK.printerTimer = 60 + Math.random() * 30;
+      G.autoWork = Math.max(0, G.autoWork - 5);
+      addLog('🖨️ プリンターが壊れた！10秒以内に修理しないと自動作業−5のまま！', 'bad');
+      playDeskSound(120, 'sawtooth', 0.1);
+    }
+  } else if (DESK.printerAlertLeft > 0) {
+    DESK.printerAlertLeft -= dt;
+    if (DESK.printerAlertLeft <= 0) {
+      DESK.printerAlertLeft = 0;
+      addLog('🖨️ 修理チャンス終了…故障中のまま放置されている', 'bad');
+    }
+  }
+
+  // 自動作業（メール未読ペナルティ込み）
+  const _mailPen = DESK.mailCount * 0.4;
+  const _effAuto = Math.max(0, G.autoWork - _mailPen);
+  G.work += _effAuto * dt;
+  G.progress += _effAuto * dt * 0.5;
+  G.minute += dt * 0.5; // 残業時間加算
+
+  renderDesk();
+
+  // ミニゲームタイマー（5〜8秒間隔）
+  miniGameTimer -= dt;
+  if (miniGameTimer <= 0) {
+    miniGameTimer = 5 + Math.random() * 3;
+    triggerMiniGame();
+  }
+
+  // イベントタイマー
+  eventTimer -= dt * G.chaosRate;
+  if (eventTimer <= 0) {
+    eventTimer = (10 + Math.random() * 15) / G.chaosRate;
+    const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+    showEvent(ev);
+    G.totalChaos++;
+  }
+
+  // タスク完了チェック
+  const task = TASKS[Math.min(G.stage, TASKS.length - 1)];
+  if (G.progress >= task.target) {
+    G.progress = 0;
+    G.stage++;
+    addLog(`「${task.name}」完了！`, 'good');
+    playLevelUp();
+
+    if (G.stage >= TASKS.length) {
+      endGame(true);
+      return;
+    }
+
+    const nextTask = TASKS[G.stage];
+    addLog(`次のタスク：「${nextTask.name}」`, 'chaos');
+  }
+
+  // ゲームオーバーチェック（残業3時間超）
+  if (G.minute >= 180) {
+    endGame(false);
+    return;
+  }
+
+  updateHUD();
+  renderUpgrades();
+  requestAnimationFrame(tick);
+}
+
+// ============================================================
+// クリック処理
+// ============================================================
+document.getElementById('workBtn').addEventListener('click', function(e) {
+  if (!G.running) return;
+  playWorkClick();
+  G.work += G.clickPower;
+  G.progress += G.clickPower * 0.5;
+  G.totalClicks++;
+
+  // クリックエフェクト
+  const fx = document.createElement('div');
+  fx.className = 'click-fx';
+  fx.textContent = `+${G.clickPower}`;
+  fx.style.left = (30 + Math.random() * 40) + '%';
+  fx.style.top = '50%';
+  document.getElementById('workArea').appendChild(fx);
+  setTimeout(() => fx.remove(), 800);
+
+  updateHUD();
+});
+
+// ============================================================
+// ゲーム終了
+// ============================================================
+function endGame(win) {
+  G.running = false;
+  const screen = document.getElementById('endScreen');
+  screen.classList.add('show');
+
+  const h = 21 + Math.floor(G.minute / 60);
+  const m = (G.minute % 60).toString().padStart(2, '0');
+
+  if (win) {
+    document.getElementById('endEmoji').textContent = '🎉';
+    document.getElementById('endTitle').textContent = '全タスク完了！！';
+    document.getElementById('endMsg').textContent = `${h}:${m}に全ての謎の仕事が終わった。誰も感謝しない。でも君は帰れる。`;
+  } else {
+    document.getElementById('endEmoji').textContent = '💀';
+    document.getElementById('endTitle').textContent = '機会損失…';
+    document.getElementById('endMsg').textContent = `${h}:${m}。残業3時間を超えてしまった。タクシーで帰ることになった。`;
+  }
+
+  document.getElementById('endStats').innerHTML = [
+    ['総クリック数', G.totalClicks + '回'],
+    ['遭遇イベント', G.totalEvents + '件'],
+    ['謎ポイント', Math.floor(G.chaos) + 'pt'],
+    ['完了タスク', G.stage + '/' + TASKS.length],
+    ['購入アップグレード', Object.values(G.upgrades).reduce((a,b)=>a+b,0) + '個'],
+    ['クリック威力', G.clickPower + ''],
+  ].map(([l, v]) => `<div class="es"><div class="el">${l}</div><div class="ev">${v}</div></div>`).join('');
+}
+
+// ============================================================
+// 効果音
+// ============================================================
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtx;
+}
+function playWorkClick() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(520, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(380, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.09, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+  } catch(e) {}
+}
+function playEventSound() {
+  try {
+    const ctx = getAudioCtx();
+    [0, 0.08, 0.16].forEach((delay, i) => {
+      const freqs = [300, 450, 600];
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freqs[i], ctx.currentTime + delay);
+      gain.gain.setValueAtTime(0.07, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.18);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.18);
+    });
+  } catch(e) {}
+}
+function playLevelUp() {
+  try {
+    const ctx = getAudioCtx();
+    [440, 554, 659, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.2);
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + i * 0.1 + 0.2);
+    });
+  } catch(e) {}
+}
+
+// ============================================================
+// タイトル画面
+// ============================================================
+function startGame() {
+  const ts = document.getElementById('titleScreen');
+  ts.style.opacity = '0';
+  setTimeout(() => {
+    ts.style.display = 'none';
+    G.running = true;
+    lastTick = Date.now();
+  }, 500);
+}
+
+// ============================================================
+// 起動（タイトル表示、ゲームはstartGame()後に開始）
+// ============================================================
+addLog('21:00 残業が始まった。なぜ？', 'bad');
+addLog('月末の謎の仕事が山積みになっている。', 'bad');
+addLog('💡 デスクパネルに注目！電話・メール・コーヒー・プリンターを管理せよ', 'chaos');
+updateHUD();
+renderUpgrades();
+renderDesk();
+lastTick = Date.now();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

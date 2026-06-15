@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>嘘つき履歴書ジェネレーター CHAOS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: #0a0a16;
+  color: #eee;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px 60px;
+}
+
+.container { width: 440px; max-width: 98vw; }
+
+/* タイトル画面 */
+#titleScreen {
+  position: fixed; inset: 0;
+  background: #0a0a16;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 4000; padding: 24px; text-align: center;
+  transition: opacity 0.5s;
+}
+#titleScreen .ts-emoji { font-size: 4em; margin-bottom: 10px; animation: tsPulse 2.5s ease-in-out infinite; }
+@keyframes tsPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+#titleScreen h2 { font-size: 1.4em; color: #ffd166; margin-bottom: 8px; line-height: 1.5; }
+#titleScreen p { color: #555; font-size: 0.88em; line-height: 1.8; max-width: 280px; margin: 0 0 6px; }
+.ts-btn {
+  margin-top: 26px; padding: 15px 42px;
+  background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px;
+  font-size: 1.1em; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 20px rgba(255,209,102,0.3);
+  transition: transform 0.1s;
+}
+.ts-btn:active { transform: scale(0.96); }
+.ts-hint { margin-top: 16px; font-size: 0.72em; color: #333; }
+
+/* ローディングオーバーレイ */
+#loadingOverlay {
+  position: fixed; inset: 0;
+  background: rgba(10,10,22,0.88);
+  display: none; align-items: center; justify-content: center;
+  z-index: 3000; flex-direction: column; gap: 14px;
+}
+#loadingOverlay.show { display: flex; }
+.lo-dots { display: flex; gap: 10px; }
+.lo-dot {
+  width: 12px; height: 12px;
+  background: #ffd166; border-radius: 50%;
+  animation: loDot 0.7s ease-in-out infinite;
+}
+.lo-dot:nth-child(2){ animation-delay: 0.15s; }
+.lo-dot:nth-child(3){ animation-delay: 0.30s; }
+@keyframes loDot { 0%,100%{transform:translateY(0);opacity:0.3} 50%{transform:translateY(-10px);opacity:1} }
+.lo-text { color: #888; font-size: 0.88em; }
+
+/* タイトル */
+.title-area { text-align: center; margin: 12px 0 20px; }
+.title-area h1 { font-size: 1.3em; color: #ffd166; margin-bottom: 4px; }
+.title-area .sub { color: #555; font-size: 0.8em; }
+
+/* アンケート画面 */
+.quiz-box {
+  background: #14142a;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.quiz-progress {
+  display: flex; gap: 6px; margin-bottom: 16px;
+}
+.qp-dot {
+  flex: 1; height: 4px; border-radius: 4px; background: #2a2a45;
+  transition: background 0.3s;
+}
+.qp-dot.done { background: #ffd166; }
+.qp-dot.active { background: #f39c12; }
+
+.q-num { font-size: 0.75em; color: #666; margin-bottom: 6px; }
+.q-text { font-size: 1em; font-weight: bold; margin-bottom: 16px; line-height: 1.5; min-height: 2.5em; }
+
+.q-choices { display: flex; flex-direction: column; gap: 8px; }
+.q-choice {
+  padding: 12px 14px;
+  background: #1e1e38;
+  border: 1.5px solid #2a2a50;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.88em;
+  line-height: 1.4;
+  transition: all 0.15s;
+  text-align: left;
+}
+.q-choice:hover { border-color: #ffd166; background: #25253d; }
+.q-choice.selected { border-color: #ffd166; background: #2a2a40; }
+
+/* 入力フォーム */
+.form-box {
+  background: #14142a;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 12px;
+}
+.form-box h2 { font-size: 0.88em; color: #ffd166; margin-bottom: 12px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.form-row { margin-bottom: 8px; }
+.form-row label { font-size: 0.75em; color: #666; display: block; margin-bottom: 4px; }
+.form-row input, .form-row select {
+  width: 100%; padding: 10px 12px;
+  background: #1e1e38; border: 1px solid #2a2a50;
+  border-radius: 8px; color: #eee; font-size: 0.88em;
+}
+.form-row input::placeholder { color: #444; }
+
+.gen-btn {
+  width: 100%; padding: 14px;
+  background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px;
+  font-size: 1.05em; font-weight: bold;
+  cursor: pointer; margin-top: 8px;
+  transition: transform 0.1s;
+}
+.gen-btn:active { transform: scale(0.98); }
+
+/* 性格タイプ結果 */
+.type-result {
+  background: #14142a;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 12px;
+  text-align: center;
+  display: none;
+  border: 1.5px solid #2a2a50;
+}
+.type-result.show { display: block; }
+.type-mascot { margin: 0 auto 10px; }
+.type-name { font-size: 1.2em; font-weight: bold; color: #ffd166; margin-bottom: 4px; }
+.type-desc { font-size: 0.82em; color: #aaa; line-height: 1.6; }
+.type-tags { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 8px; }
+.type-tag {
+  font-size: 0.72em; padding: 3px 10px;
+  border-radius: 20px; background: #2a2a45;
+  color: #aaa; border: 1px solid #3a3a60;
+}
+
+/* 盛り度 */
+.bs-meter {
+  background: #14142a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: none;
+}
+.bs-meter.show { display: block; }
+.bs-label { font-size: 0.75em; color: #666; margin-bottom: 6px; }
+.bs-bar-wrap { height: 12px; background: #0a0a16; border-radius: 8px; overflow: hidden; }
+.bs-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 1.2s ease;
+  background: linear-gradient(90deg, #2ecc71 0%, #f39c12 50%, #e74c3c 100%);
+}
+.bs-comment { font-size: 0.78em; color: #ffd166; margin-top: 6px; }
+
+/* アクション */
+.action-row { display: flex; gap: 8px; margin-bottom: 12px; display: none; }
+.action-row.show { display: flex; }
+.copy-btn, .regen-btn, .reset-btn {
+  flex: 1; padding: 11px;
+  border: none; border-radius: 8px;
+  font-size: 0.82em; cursor: pointer; font-weight: bold;
+}
+.copy-btn { background: #2ecc71; color: #fff; }
+.regen-btn { background: #3498db; color: #fff; }
+.reset-btn { background: #444; color: #eee; }
+
+/* 履歴書 */
+.resume-box {
+  background: #fffdf6;
+  color: #111;
+  border-radius: 12px;
+  padding: 22px 20px;
+  margin-bottom: 12px;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  display: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.resume-box.show { display: block; }
+.resume-header {
+  text-align: center;
+  border-bottom: 2px solid #333;
+  padding-bottom: 12px; margin-bottom: 14px;
+}
+.resume-header h2 { font-size: 1.25em; letter-spacing: 0.3em; margin-bottom: 4px; }
+.resume-header .date { font-size: 0.78em; color: #777; }
+.resume-name-block { margin: 8px 0 4px; }
+.resume-name { font-size: 1.05em; font-weight: bold; }
+.resume-meta { font-size: 0.75em; color: #777; margin-top: 2px; }
+.rs { margin-bottom: 14px; }
+.rs h3 {
+  font-size: 0.8em;
+  background: #14142a; color: #ffd166;
+  padding: 4px 10px; border-radius: 4px;
+  margin-bottom: 8px;
+  font-family: 'Hiragino Sans', sans-serif;
+}
+.ri {
+  display: flex; gap: 10px;
+  font-size: 0.8em; margin-bottom: 6px;
+  padding-bottom: 5px; border-bottom: 1px dashed #e0e0d8;
+  line-height: 1.5;
+}
+.ri .yr { color: #999; min-width: 55px; font-size: 0.9em; }
+.ri .ct { flex: 1; }
+.ri .ct .og { font-weight: bold; }
+.ri .ct .dt { color: #666; font-size: 0.9em; margin-top: 1px; }
+.pr-box {
+  background: #f9f6ee; border: 1px solid #ddd;
+  border-radius: 6px; padding: 10px 12px;
+  font-size: 0.8em; line-height: 1.8; color: #333;
+}
+.skill-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.skill-tag {
+  background: #eee; border-radius: 4px;
+  padding: 3px 8px; font-size: 0.76em; color: #444;
+}
+.skill-tag.fake { background: #ffe0e0; color: #c00; }
+.bs-badge {
+  font-size: 0.75em; color: #e74c3c;
+  background: #ffe0e0; border-radius: 4px;
+  padding: 2px 8px; display: inline-block; margin-bottom: 8px;
+}
+.type-stamp {
+  display: inline-block;
+  border: 3px solid #c0392b;
+  color: #c0392b;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 0.8em;
+  font-weight: bold;
+  transform: rotate(-8deg);
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #2ecc71; color: #fff;
+  padding: 10px 20px; border-radius: 8px;
+  font-size: 0.88em; opacity: 0; transition: all 0.3s; z-index: 999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== AI対決 ===== */
+.ai-battle {
+  background: #0e0e22; border: 1.5px solid rgba(231,76,60,0.35);
+  border-radius: 14px; padding: 18px; margin-bottom: 12px; display: none;
+}
+.ai-battle.show { display: block; }
+.aib-header { text-align: center; margin-bottom: 16px; }
+.aib-title { font-size: 1.1em; font-weight: bold; color: #e74c3c; letter-spacing: 0.04em; }
+.aib-sub   { font-size: 0.76em; color: #555; margin-top: 4px; }
+.aib-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.aib-card  { background: #14142a; border-radius: 10px; padding: 11px 10px; }
+.aib-card-you { border: 1.5px solid rgba(255,209,102,0.5); }
+.aib-card-ai  { border: 1.5px solid rgba(231,76,60,0.5); }
+.aib-card-lbl { font-size: 0.7em; color: #555; margin-bottom: 5px; }
+.aib-card-name { font-size: 0.82em; font-weight: bold; color: #eee; margin-bottom: 8px; min-height: 2em; line-height: 1.4; }
+.aib-bar-wrap2 { height: 8px; background: #0a0a16; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.aib-bar-fill2 { height: 100%; border-radius: 4px; transition: width 1.4s ease; }
+.aib-bar-you   { background: linear-gradient(90deg, #f39c12, #ffd166); }
+.aib-bar-ai    { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+.aib-card-score { font-size: 1.5em; font-weight: bold; text-align: center; }
+.aib-card-you .aib-card-score { color: #ffd166; }
+.aib-card-ai  .aib-card-score { color: #e74c3c; }
+.aib-ai-entries {
+  font-size: 0.74em; line-height: 1.9; color: #777;
+  border-top: 1px solid #1e1e38; padding-top: 10px; margin-bottom: 12px;
+}
+.aib-ai-entries .e-title { color: #e74c3c; font-weight: bold; margin-bottom: 4px; }
+.aib-ai-entries .e-ach   { color: #a78bfa; }
+.aib-ai-entries .e-pr    { color: #74b9ff; font-style: italic; }
+.aib-verdict {
+  text-align: center; padding: 14px; border-radius: 10px;
+  background: #0a0a16; border: 1.5px solid #2a2a50;
+}
+.aib-verdict-emoji { font-size: 2em; margin-bottom: 6px; }
+.aib-verdict-title { font-size: 0.95em; font-weight: bold; color: #ffd166; }
+.aib-verdict-sub   { font-size: 0.76em; color: #555; margin-top: 4px; }
+.aib-rematch {
+  width: 100%; margin-top: 10px; padding: 11px;
+  background: #14122a; color: #a78bfa;
+  border: 1px solid #3a2a60; border-radius: 8px;
+  cursor: pointer; font-size: 0.88em; font-family: inherit;
+  transition: border-color 0.2s;
+}
+.aib-rematch:hover { border-color: #a78bfa; }
+
+/* ===== バレ度メーター ===== */
+#bareDeg {
+  background: #14142a; border-radius: 10px;
+  padding: 12px 16px; margin-bottom: 12px; display: none;
+  border: 1px solid #2a2a50;
+}
+#bareDeg.show { display: block; }
+.bd-label { font-size: 0.78em; color: #e74c3c; font-weight: bold; margin-bottom: 6px; letter-spacing: 0.04em; }
+.bd-bar-wrap { height: 12px; background: #0a0a16; border-radius: 8px; overflow: hidden; }
+.bd-bar-fill {
+  height: 100%; border-radius: 8px;
+  transition: width 1.4s ease;
+  background: linear-gradient(90deg, #2ecc71, #f39c12, #e74c3c);
+}
+.bd-comment { font-size: 0.8em; color: #ffd166; margin-top: 6px; }
+
+/* ===== 面接オーバーレイ ===== */
+#interviewPanel {
+  display: none; position: fixed; inset: 0;
+  background: rgba(4,2,14,0.94); z-index: 3600;
+  flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+}
+#interviewPanel.show { display: flex; }
+.iv-box {
+  background: #10101e; border: 1.5px solid #2a2a50;
+  border-radius: 16px; padding: 22px 20px;
+  width: 380px; max-width: 96vw;
+}
+.iv-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.iv-interviewer { font-size: 1.2em; font-weight: bold; color: #ffd166; }
+.iv-qcount { font-size: 0.75em; color: #555; }
+.iv-divider { height: 1px; background: #2a2a50; margin-bottom: 14px; }
+.iv-question {
+  font-size: 0.95em; line-height: 1.7; color: #ddd;
+  margin-bottom: 16px; min-height: 3em;
+}
+.iv-choices { display: flex; flex-direction: column; gap: 8px; }
+.iv-choice {
+  padding: 13px 14px; background: #1e1e38;
+  border: 1.5px solid #2a2a50; border-radius: 10px;
+  cursor: pointer; font-size: 0.86em; line-height: 1.4;
+  transition: all 0.15s; text-align: left; color: #ddd;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-choice:hover { border-color: #ffd166; background: #25253d; }
+.iv-choice:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* タイピング（連打）チャレンジ */
+.iv-mash-wrap { text-align: center; }
+.iv-mash-desc { font-size: 0.82em; color: #888; margin-bottom: 10px; }
+.iv-mash-cd   { font-size: 2.2em; font-weight: bold; color: #e74c3c; margin-bottom: 8px;
+                font-variant-numeric: tabular-nums; }
+.iv-mash-count { font-size: 1.1em; color: #ffd166; margin-bottom: 10px; }
+.iv-mash-btn {
+  width: 100%; padding: 16px; background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+  animation: mashGlow 0.4s ease-in-out infinite alternate;
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-mash-btn:disabled { opacity: 0.4; animation: none; }
+.iv-mash-btn:active   { transform: scale(0.95); }
+@keyframes mashGlow { to { box-shadow: 0 0 18px rgba(255,209,102,0.55); } }
+
+/* バレ度インライン */
+.iv-bare-wrap2 { margin-top: 14px; }
+.iv-bare-label { font-size: 0.75em; color: #e74c3c; margin-bottom: 4px; }
+.iv-bare-bar-wrap { height: 8px; background: #0a0a16; border-radius: 4px; overflow: hidden; }
+.iv-bare-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease;
+                    background: linear-gradient(90deg, #2ecc71, #e74c3c); }
+.iv-bare-pct { font-size: 0.8em; color: #ffd166; margin-top: 4px; }
+
+/* 面接結果 */
+.iv-result-wrap { text-align: center; }
+.iv-result-emoji { font-size: 3em; margin-bottom: 8px; }
+.iv-result-title { font-size: 1.1em; font-weight: bold; color: #ffd166; margin-bottom: 6px; }
+.iv-result-desc  { font-size: 0.84em; color: #aaa; line-height: 1.7; margin-bottom: 16px; }
+.iv-close-btn {
+  width: 100%; padding: 14px; background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px; font-size: 1em; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-close-btn:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<!-- タイトル画面 -->
+<div id="titleScreen">
+  <div class="ts-emoji">📄</div>
+  <h2>嘘つき履歴書<br>ジェネレーター CHAOS</h2>
+  <p>5問の性格診断をもとに<br>最高に盛った履歴書を自動生成。<br>盛り度レベル1〜4、10種の性格タイプ。</p>
+  <button class="ts-btn" onclick="startResume()">🔍 診断を開始する</button>
+  <div class="ts-hint">※ 実際の就活には使用しないでください</div>
+</div>
+
+<!-- ローディング -->
+<div id="loadingOverlay">
+  <div class="lo-dots"><div class="lo-dot"></div><div class="lo-dot"></div><div class="lo-dot"></div></div>
+  <div class="lo-text">盛り盛り履歴書を作成中…</div>
+</div>
+
+<div class="container">
+  <div class="title-area">
+    <h1>📄 嘘つき履歴書ジェネレーター CHAOS</h1>
+    <div class="sub">あなたの性格を診断して、最高に盛った履歴書を作ります</div>
+  </div>
+
+  <!-- アンケート -->
+  <div class="quiz-box" id="quizBox">
+    <div class="quiz-progress" id="quizProgress"></div>
+    <div class="q-num" id="qNum">Q1 / 5</div>
+    <div class="q-text" id="qText"></div>
+    <div class="q-choices" id="qChoices"></div>
+  </div>
+
+  <!-- 入力フォーム（診断後に表示） -->
+  <div class="form-box" id="formBox" style="display:none">
+    <h2>📝 あなたの情報を入力</h2>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>名前</label>
+        <input id="inName" type="text" placeholder="田中 太郎">
+      </div>
+      <div class="form-row">
+        <label>年齢</label>
+        <input id="inAge" type="number" placeholder="22" min="18" max="60">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>志望職種</label>
+      <select id="inJob">
+        <option value="consultant">コンサルタント</option>
+        <option value="engineer">エンジニア</option>
+        <option value="sales">営業</option>
+        <option value="marketing">マーケター</option>
+        <option value="pm">プロジェクトマネージャー</option>
+        <option value="finance">金融アナリスト</option>
+        <option value="general">総合職</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>本当の強み（正直に）</label>
+      <input id="inStrength" type="text" placeholder="例：コミュ力、粘り強さ">
+    </div>
+    <button class="gen-btn" id="genBtn">✨ 履歴書を生成する</button>
+  </div>
+
+  <!-- 性格タイプ -->
+  <div class="type-result" id="typeResult"></div>
+
+  <!-- 盛り度 -->
+  <div class="bs-meter" id="bsMeter">
+    <div class="bs-label">📊 盛り度メーター</div>
+    <div class="bs-bar-wrap"><div class="bs-bar-fill" id="bsBar" style="width:0%"></div></div>
+    <div class="bs-comment" id="bsComment"></div>
+  </div>
+
+  <!-- アクション -->
+  <div class="action-row" id="actionRow">
+    <button class="reset-btn" id="resetBtn">🔄 最初から</button>
+    <button class="regen-btn" id="regenBtn">♻️ 再生成</button>
+    <button class="copy-btn" id="copyBtn">📋 コピー</button>
+  </div>
+
+  <!-- 履歴書 -->
+  <div class="resume-box" id="resumeBox"></div>
+
+  <!-- AI対決 -->
+  <div class="ai-battle" id="aiBattle" style="display:none">
+    <div class="aib-header">
+      <div class="aib-title">🤖 vs 📄 AI盛り度対決</div>
+      <div class="aib-sub">カオスAIとあなたの「盛り度」を対決させます</div>
+    </div>
+    <div class="aib-cards">
+      <div class="aib-card aib-card-you">
+        <div class="aib-card-lbl">📄 あなたの履歴書</div>
+        <div class="aib-card-name" id="aibYourName">—</div>
+        <div class="aib-bar-wrap2"><div class="aib-bar-fill2 aib-bar-you" id="aibYourBar" style="width:0%"></div></div>
+        <div class="aib-card-score" id="aibYourScore">0%</div>
+      </div>
+      <div class="aib-card aib-card-ai">
+        <div class="aib-card-lbl">🤖 カオスAI</div>
+        <div class="aib-card-name" id="aibAiName">—</div>
+        <div class="aib-bar-wrap2"><div class="aib-bar-fill2 aib-bar-ai" id="aibAiBar" style="width:0%"></div></div>
+        <div class="aib-card-score" id="aibAiScore">0%</div>
+      </div>
+    </div>
+    <div class="aib-ai-entries" id="aibAiEntries"></div>
+    <div class="aib-verdict" id="aibVerdict">
+      <div class="aib-verdict-emoji" id="aibVerdictEmoji"></div>
+      <div class="aib-verdict-title" id="aibVerdictTitle"></div>
+      <div class="aib-verdict-sub"   id="aibVerdictSub"></div>
+    </div>
+    <button class="aib-rematch" id="aibRematch">🔄 AIと再対決する</button>
+  </div>
+
+  <!-- バレ度メーター（面接後に表示） -->
+  <div id="bareDeg">
+    <div class="bd-label">💀 バレ度メーター（面接結果）</div>
+    <div class="bd-bar-wrap"><div class="bd-bar-fill" id="bdBar" style="width:0%"></div></div>
+    <div class="bd-comment" id="bdComment"></div>
+  </div>
+</div>
+
+<!-- 面接オーバーレイ -->
+<div id="interviewPanel">
+  <div class="iv-box">
+    <div class="iv-header">
+      <div class="iv-interviewer" id="ivInterviewer">🧑‍💼 面接官</div>
+      <div class="iv-qcount" id="ivQcount">Q 1 / 3</div>
+    </div>
+    <div class="iv-divider"></div>
+    <div class="iv-question" id="ivQuestion"></div>
+    <div id="ivContent"></div>
+    <div class="iv-bare-wrap2">
+      <div class="iv-bare-label">💀 バレ度</div>
+      <div class="iv-bare-bar-wrap"><div class="iv-bare-bar-fill" id="ivBareBarInline" style="width:0%"></div></div>
+      <div class="iv-bare-pct" id="ivBarePct">0%</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// アンケートデータ
+// ============================================================
+const QUESTIONS = [
+  {
+    text: '🌅 月曜の朝、目覚ましが鳴った瞬間の気持ちは？',
+    choices: [
+      { text: '「よっしゃ！今週も征くぞ！」と布団から飛び出す', type: 'A' },
+      { text: '「今週のタスクを整理しよう」と頭が動き始める', type: 'B' },
+      { text: '「…あと5分」と3回繰り返す', type: 'C' },
+      { text: '「今日は有休が取れないか考える」と脳が起動する', type: 'D' },
+    ]
+  },
+  {
+    text: '😴 会議中に眠くなったとき、あなたは？',
+    choices: [
+      { text: '気合いで乗り越える。眠くならない', type: 'A' },
+      { text: 'メモを取りながら眠気を覚ます', type: 'B' },
+      { text: 'そっと目を閉じて「考えてるふり」をする', type: 'C' },
+      { text: '積極的に発言して場を動かして眠気を飛ばす', type: 'D' },
+    ]
+  },
+  {
+    text: '💼 上司に無理な仕事を振られた。どうする？',
+    choices: [
+      { text: '「任せてください！」と即答して後でなんとかする', type: 'A' },
+      { text: '「優先度と締め切りを確認させてください」と整理する', type: 'B' },
+      { text: '「難しいです…」と正直に言って巻き込んでもらう', type: 'C' },
+      { text: '「〇〇さんのほうが向いてると思いますよ」と振り返す', type: 'D' },
+    ]
+  },
+  {
+    text: '🍻 飲み会の幹事を突然頼まれた。あなたは？',
+    choices: [
+      { text: '「わかりました！おまかせください！」と即引き受ける', type: 'A' },
+      { text: 'スプレッドシートで参加者・予算・候補店を一覧化する', type: 'B' },
+      { text: '「えっ、私ですか…？」と言いながら断れずやる', type: 'C' },
+      { text: '「今回は〇〇くんが適任じゃないですかね？」とかわす', type: 'D' },
+    ]
+  },
+  {
+    text: '⏰ 退勤1分前に「急ぎのお願いがあって…」と声がかかった。',
+    choices: [
+      { text: '「どんとこい！やりましょう！」と引き受ける', type: 'A' },
+      { text: '「内容と所要時間を教えてもらえますか？」と確認する', type: 'B' },
+      { text: 'もう帰る気満々だったけど「…わかりました」と諦める', type: 'C' },
+      { text: '「今日は先約があって…明日一番でどうでしょう」と交渉する', type: 'D' },
+    ]
+  },
+];
+
+// ============================================================
+// 10種類の性格タイプ
+// ============================================================
+const TYPES = {
+  AAAA: {
+    name: '🦁 ゴリゴリ体育会系',
+    desc: '根性と気合いで全てを解決する魂のビジネスマン。論理より熱量。データより魂。締め切りは破ってから謝る。',
+    tags: ['根性論', 'チームワーク', '体育会', '反省しない', '元気が取り柄'],
+    bsLevel: 3,
+    svgType: 'lion',
+    prStyle: 'sports',
+    skillBoost: ['根性', '気合い', '声のデカさ', '二日酔いでも出勤'],
+    achBoost: ['体育会系クラブ全国大会', '耐久営業コンテスト優勝'],
+  },
+  BBBB: {
+    name: '🤖 論理モンスター',
+    desc: '全てをロジックで語り、データなき発言は認めない。会議では必ずスライドを作ってくる。感情は非効率だと思っている。',
+    tags: ['ロジカル', 'データ主義', 'KPI厨', '空気読まない', '正論マシーン'],
+    bsLevel: 2,
+    svgType: 'robot',
+    prStyle: 'logic',
+    skillBoost: ['Excel神', 'Python', 'SQL', 'ロジカルシンキング（超上級）'],
+    achBoost: ['論文国際誌掲載', 'データ分析コンテスト優勝'],
+  },
+  CCCC: {
+    name: '😇 天然系聖人',
+    desc: 'なぜか全員から好かれる謎の人物。ミスをしても「仕方ない」と言われる。天然なのか計算なのか誰にもわからない。',
+    tags: ['天然', '愛されキャラ', '空気読める', 'なぜか得してる', 'ゆるふわ'],
+    bsLevel: 1,
+    svgType: 'angel',
+    prStyle: 'angel',
+    skillBoost: ['愛嬌', '場の空気を読む力', '謝罪術（神レベル）'],
+    achBoost: ['社内人気投票1位（3年連続）', 'お客様満足度全社最高'],
+  },
+  DDDD: {
+    name: '🦊 要領だけはいい人',
+    desc: '仕事の6割は他人にうまく振り、残り4割で成果を出す天才。「忙しそうに見せる技術」を極めている。',
+    tags: ['要領よし', '根回し', 'うまく生きる', '計算高い', 'サバイバル'],
+    bsLevel: 4,
+    svgType: 'fox',
+    prStyle: 'strategic',
+    skillBoost: ['根回し術（神）', '責任転嫁（高度）', '他力本願', 'ネゴシエーション'],
+    achBoost: ['社内政治サバイバル（全勝）', '仕事を振る技術コンテスト優勝'],
+  },
+  ABAB: {
+    name: '🔥 意識高い系',
+    desc: '常に自己成長を語り、朝5時に起きてサウナに入る。読んだ本を必ずSNSに投稿する。語彙力だけは異常に高い。',
+    tags: ['意識高い', '自己啓発', '朝活', 'サウナ', 'PDCAマニア'],
+    bsLevel: 3,
+    svgType: 'fire',
+    prStyle: 'ambitious',
+    skillBoost: ['TOEIC990点', 'MBA取得済み', '毎朝4時起き習慣', '読書年間200冊'],
+    achBoost: ['ビジネスコンテスト全国優勝', 'Forbes 30 Under 30 選出'],
+  },
+  CDCD: {
+    name: '😴 省エネ主義者',
+    desc: '最小限の力で最大限の成果を出すことを信条とする。仕事は「やらなくていい理由」を探すことから始める。',
+    tags: ['省エネ', 'ミニマリスト', '定時退社', '仕事を減らす天才', 'QOL重視'],
+    bsLevel: 2,
+    svgType: 'sloth',
+    prStyle: 'efficient',
+    skillBoost: ['業務効率化', '無駄削除術', '自動化スクリプト', '断る技術'],
+    achBoost: ['残業ゼロ達成（1年継続）', '業務プロセス削減コンテスト優勝'],
+  },
+  ABCD: {
+    name: '🎭 八方美人',
+    desc: '誰に対してもYESと言い、全方向に好かれようとする。会議では全員の意見に「おっしゃる通りです」と言う。',
+    tags: ['八方美人', 'YES人間', '嫌われたくない', '調整役', '平和主義'],
+    bsLevel: 2,
+    svgType: 'mask',
+    prStyle: 'harmony',
+    skillBoost: ['調整力', '傾聴', 'ステークホルダー管理', 'コンフリクト回避術'],
+    achBoost: ['社内コミュニケーション賞受賞', '360度評価で全項目最高評価'],
+  },
+  DCBA: {
+    name: '💀 すでに終わってる人',
+    desc: '心はすでに退職している。口癖は「昔はよかった」。後輩への唯一のアドバイスは「転職しろ」。',
+    tags: ['燃え尽き症候群', 'ベテラン', '達観', '転職検討中', '諦観'],
+    bsLevel: 4,
+    svgType: 'skull',
+    prStyle: 'veteran',
+    skillBoost: ['生存術', '愚痴を言わない技術（実は言ってる）', '昭和の根性論'],
+    achBoost: ['勤続20年表彰', '会社とともに沈みかけた実績'],
+  },
+  AABB: {
+    name: '🌸 夢見がちポエマー',
+    desc: '仕事をする意味を常に哲学している。企画書の最初のページは必ず「世界を変えたい」から始まる。',
+    tags: ['ビジョナリー', 'ポエム', '夢想家', 'スティーブ・ジョブズが好き', '現実見て'],
+    bsLevel: 3,
+    svgType: 'star',
+    prStyle: 'dreamer',
+    skillBoost: ['ビジョン設計', 'プレゼン（感情訴求型）', 'ストーリーテリング'],
+    achBoost: ['TEDxスピーカー選出', 'SNSフォロワー10万人達成'],
+  },
+  BBAA: {
+    name: '🕵️ 根回し職人',
+    desc: '会議の前に全ての根回しを完了させる。会議本番は消化試合。全ての決定を水面下でコントロールする。',
+    tags: ['根回し', '政治力', '黒幕', '根気強い', '調略'],
+    bsLevel: 3,
+    svgType: 'detective',
+    prStyle: 'nemawashi',
+    skillBoost: ['根回し（神レベル）', '人心掌握術', '情報収集', '組織内政治'],
+    achBoost: ['全社プロジェクト史上最短合意形成', '反対派を全員賛成に転換した実績'],
+  },
+};
+
+// マスコットSVG生成（可愛いデザイン）
+function getMascotSVG(type, size = 90) {
+  // 共通ヘルパー：大きな目・ほっぺ・シンプルフェイス
+  const face = (bg, eyeColor='#1a1a2e', blush='#ffb8b8', extra='') =>
+    `<circle cx="40" cy="44" r="22" fill="${bg}"/>
+     <circle cx="31" cy="41" r="7" fill="white"/>
+     <circle cx="49" cy="41" r="7" fill="white"/>
+     <circle cx="32" cy="42" r="4.5" fill="${eyeColor}"/>
+     <circle cx="50" cy="42" r="4.5" fill="${eyeColor}"/>
+     <circle cx="33" cy="41" r="1.8" fill="white"/>
+     <circle cx="51" cy="41" r="1.8" fill="white"/>
+     <ellipse cx="26" cy="48" rx="5" ry="3.5" fill="${blush}" opacity="0.7"/>
+     <ellipse cx="54" cy="48" rx="5" ry="3.5" fill="${blush}" opacity="0.7"/>
+     <path d="M34 52 Q40 58 46 52" stroke="#e17055" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+     ${extra}`;
+
+  const svgs = {
+    lion: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="40" r="38" fill="#f39c12" opacity="0.15"/>
+      <circle cx="40" cy="40" r="32" fill="#f39c12" opacity="0.25" stroke="#e67e22" stroke-width="5" stroke-dasharray="5 3"/>
+      ${face('#ffeaa7','#2d3436','#ffb8b8',
+        `<path d="M22 28 Q26 18 32 24" stroke="#e67e22" stroke-width="3" fill="none"/>
+         <path d="M58 28 Q54 18 48 24" stroke="#e67e22" stroke-width="3" fill="none"/>
+         <ellipse cx="40" cy="56" rx="10" ry="6" fill="#f0c060"/>
+         <line x1="16" y1="44" x2="27" y2="46" stroke="#aaa" stroke-width="1.5"/>
+         <line x1="16" y1="47" x2="27" y2="47" stroke="#aaa" stroke-width="1.5"/>
+         <line x1="53" y1="46" x2="64" y2="44" stroke="#aaa" stroke-width="1.5"/>
+         <line x1="53" y1="47" x2="64" y2="47" stroke="#aaa" stroke-width="1.5"/>`)}
+    </svg>`,
+    robot: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <rect x="16" y="22" width="48" height="44" rx="10" fill="#5dade2"/>
+      <rect x="20" y="26" width="40" height="28" rx="6" fill="#1a2535"/>
+      <rect x="32" y="8" width="16" height="16" rx="5" fill="#5dade2"/>
+      <circle cx="40" cy="10" r="3.5" fill="#f39c12"/>
+      <rect x="6" y="32" width="10" height="18" rx="5" fill="#5dade2"/>
+      <rect x="64" y="32" width="10" height="18" rx="5" fill="#5dade2"/>
+      <circle cx="31" cy="36" r="7" fill="#0d1b2a"/>
+      <circle cx="49" cy="36" r="7" fill="#0d1b2a"/>
+      <circle cx="31" cy="36" r="5" fill="#00cec9"/>
+      <circle cx="49" cy="36" r="5" fill="#00cec9"/>
+      <circle cx="32" cy="35" r="2" fill="white"/>
+      <circle cx="50" cy="35" r="2" fill="white"/>
+      <rect x="26" y="48" width="28" height="10" rx="4" fill="#0d1b2a"/>
+      <circle cx="34" cy="53" r="2.5" fill="#00cec9"/>
+      <circle cx="40" cy="53" r="2.5" fill="#f39c12"/>
+      <circle cx="46" cy="53" r="2.5" fill="#e74c3c"/>
+      <rect x="22" y="66" width="12" height="10" rx="4" fill="#5dade2"/>
+      <rect x="46" y="66" width="12" height="10" rx="4" fill="#5dade2"/>
+    </svg>`,
+    angel: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="11" rx="24" ry="7" fill="none" stroke="#f39c12" stroke-width="4"/>
+      <circle cx="40" cy="8" r="4" fill="#f39c12" opacity="0.6"/>
+      <path d="M4 52 Q8 30 20 40 Q10 46 16 58 Z" fill="#ecf0f1"/>
+      <path d="M76 52 Q72 30 60 40 Q70 46 64 58 Z" fill="#ecf0f1"/>
+      ${face('#ffeaa7','#2d3436','#fab1a0',
+        `<ellipse cx="40" cy="58" rx="10" ry="5" fill="#ffeaa7" opacity="0.6"/>`)}
+    </svg>`,
+    fox: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="18,32 8,6 30,24" fill="#e17055"/>
+      <polygon points="62,32 72,6 50,24" fill="#e17055"/>
+      <polygon points="21,30 12,10 30,24" fill="#ffeaa7"/>
+      <polygon points="59,30 68,10 50,24" fill="#ffeaa7"/>
+      <ellipse cx="40" cy="48" rx="26" ry="22" fill="#e17055"/>
+      <ellipse cx="40" cy="52" rx="17" ry="12" fill="#ffeaa7"/>
+      ${face('#ffeaa7','#2d3436','#ffb8b8',
+        `<ellipse cx="40" cy="52" rx="4.5" ry="3" fill="#e17055"/>
+         <line x1="16" y1="46" x2="28" y2="48" stroke="#aaa" stroke-width="1.5"/>
+         <line x1="16" y1="49" x2="28" y2="50" stroke="#aaa" stroke-width="1.5"/>
+         <line x1="52" y1="48" x2="64" y2="46" stroke="#aaa" stroke-width="1.5"/>
+         <line x1="52" y1="50" x2="64" y2="49" stroke="#aaa" stroke-width="1.5"/>`)}
+    </svg>`,
+    fire: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <path d="M28 30 Q22 16 32 20 Q26 10 38 14 Q36 4 44 8 Q48 2 52 10 Q58 16 48 20 Q56 18 54 28 Q50 18 44 26 Q42 14 36 22 Q34 14 28 22 Z" fill="#e74c3c"/>
+      <ellipse cx="40" cy="62" rx="22" ry="16" fill="#e17055"/>
+      <ellipse cx="40" cy="56" rx="16" ry="18" fill="#f39c12"/>
+      ${face('#ffeaa7','#2d3436','#ffb8b8','')}
+    </svg>`,
+    sloth: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 24 Q14 40 10 56" stroke="#a29bfe" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M70 24 Q66 40 70 56" stroke="#a29bfe" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle cx="10" cy="21" r="6" fill="#6c5ce7"/>
+      <circle cx="70" cy="21" r="6" fill="#6c5ce7"/>
+      <circle cx="40" cy="40" r="30" fill="#a29bfe"/>
+      ${face('#dfe6e9','#2d3436','#c9b1fd',
+        `<rect x="25" y="30" width="8" height="3.5" rx="1.5" fill="#6c5ce7"/>
+         <rect x="47" y="30" width="8" height="3.5" rx="1.5" fill="#6c5ce7"/>
+         <path d="M33 52 Q40 50 47 52" stroke="#636e72" stroke-width="2" fill="none" stroke-linecap="round"/>`)}
+    </svg>`,
+    mask: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="40" r="30" fill="#fd79a8"/>
+      <clipPath id="cl"><circle cx="40" cy="40" r="30"/></clipPath>
+      <rect x="40" y="10" width="30" height="60" fill="#00b894" opacity="0.55" clip-path="url(#cl)"/>
+      <circle cx="31" cy="38" r="7" fill="white"/>
+      <circle cx="49" cy="38" r="7" fill="white"/>
+      <circle cx="32" cy="39" r="4.5" fill="#e84393"/>
+      <circle cx="50" cy="39" r="4.5" fill="#00b894"/>
+      <circle cx="33" cy="38" r="1.8" fill="white"/>
+      <circle cx="51" cy="38" r="1.8" fill="white"/>
+      <ellipse cx="26" cy="46" rx="5" ry="3" fill="#fab1a0" opacity="0.7"/>
+      <ellipse cx="54" cy="46" rx="5" ry="3" fill="#55efc4" opacity="0.7"/>
+      <path d="M30 52 Q36 57 40 52" stroke="#e17055" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M40 52 Q44 57 50 52" stroke="#00b894" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    </svg>`,
+    skull: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="36" r="28" fill="#74888e"/>
+      <rect x="26" y="55" width="28" height="18" rx="5" fill="#74888e"/>
+      <rect x="29" y="59" width="7" height="12" rx="3" fill="#2d3436"/>
+      <rect x="37" y="59" width="6" height="12" rx="3" fill="#2d3436"/>
+      <rect x="44" y="59" width="7" height="12" rx="3" fill="#2d3436"/>
+      <ellipse cx="31" cy="33" rx="9" ry="10" fill="#2d3436"/>
+      <ellipse cx="49" cy="33" rx="9" ry="10" fill="#2d3436"/>
+      <circle cx="31" cy="33" r="5" fill="#74888e" opacity="0.45"/>
+      <circle cx="49" cy="33" r="5" fill="#74888e" opacity="0.45"/>
+      <circle cx="31" cy="32" r="2.2" fill="white" opacity="0.3"/>
+      <circle cx="49" cy="32" r="2.2" fill="white" opacity="0.3"/>
+      <path d="M34 50 Q40 46 46 50" stroke="#2d3436" stroke-width="2.5" fill="none"/>
+    </svg>`,
+    star: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="40,3 46,27 72,27 52,43 60,68 40,52 20,68 28,43 8,27 34,27" fill="#f39c12"/>
+      <circle cx="40" cy="38" r="19" fill="#ffeaa7"/>
+      ${face('#ffeaa7','#6c5ce7','#fab1a0','')}
+    </svg>`,
+    detective: `<svg width="${size}" height="${size}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="16" rx="28" ry="11" fill="#2d3436"/>
+      <rect x="16" y="10" width="48" height="9" rx="3" fill="#2d3436"/>
+      <rect x="28" y="5" width="24" height="8" rx="4" fill="#1a1a1a"/>
+      <circle cx="40" cy="44" r="24" fill="#dfe6e9"/>
+      ${face('#dfe6e9','#0984e3','#b2bec3',
+        `<rect x="27" y="32" width="10" height="7" rx="3.5" fill="#2d3436"/>
+         <rect x="43" y="32" width="10" height="7" rx="3.5" fill="#2d3436"/>
+         <rect x="37" y="32" width="6" height="5" rx="2" fill="#636e72"/>
+         <rect x="34" y="58" width="3" height="15" rx="1.5" fill="#b2bec3"/>
+         <ellipse cx="35" cy="73" rx="5.5" ry="2.5" fill="#b2bec3"/>`)}
+    </svg>`,
+  };
+  return svgs[type] || svgs.lion;
+}
+
+// ============================================================
+// 性格判定ロジック
+// ============================================================
+function determineType(answers) {
+  const key = answers.join('');
+  if (TYPES[key]) return TYPES[key];
+
+  // カウント
+  const count = { A: 0, B: 0, C: 0, D: 0 };
+  answers.forEach(a => count[a]++);
+  const max = Math.max(...Object.values(count));
+  const dominant = Object.keys(count).find(k => count[k] === max);
+
+  // 組み合わせパターン
+  if (count.A >= 3) return TYPES.AAAA;
+  if (count.B >= 3) return TYPES.BBBB;
+  if (count.C >= 3) return TYPES.CCCC;
+  if (count.D >= 3) return TYPES.DDDD;
+  if (count.A >= 2 && count.B >= 2) return TYPES.ABAB;
+  if (count.C >= 2 && count.D >= 2) return TYPES.CDCD;
+  if (count.A >= 1 && count.B >= 1 && count.C >= 1 && count.D >= 1) return TYPES.ABCD;
+  if (count.D >= 2 && count.C >= 2) return TYPES.DCBA;
+  if (count.A >= 2 && count.B >= 2) return TYPES.BBAA;
+  if (count.A >= 2) return TYPES.AABB;
+  return TYPES.ABCD;
+}
+
+// ============================================================
+// 履歴書データ
+// ============================================================
+const DATA = {
+  universities: {
+    1: ['地元の私立大学','○○県立大学','地方国立大学'],
+    2: ['早稲田大学','慶應義塾大学','上智大学','ICU'],
+    3: ['東京大学','京都大学','一橋大学'],
+    4: ['ハーバード大学','オックスフォード大学','MIT'],
+  },
+  internships: {
+    consultant:['大手コンサルでデータ分析補助（6ヶ月）','外資戦略コンサルでケース作成補助（4ヶ月）','McKinseyでリサーチ担当（1年）','BCGでクライアント提案に参画（8ヶ月）'],
+    engineer:['スタートアップでアプリ開発補助（6ヶ月）','SIerでシステム開発参画（4ヶ月）','Google本社でアルゴリズム改善（1年）','Meta AIチームでLLM開発リード（2年）'],
+    sales:['大手商社でルート営業補助（6ヶ月）','外資メーカーで新規開拓（4ヶ月）','月間売上1,000万円達成の実績（6ヶ月）','業界最速の新規100社開拓'],
+    marketing:['スタートアップでSNSマーケ担当（フォロワー1万人達成）','デジタルマーケ会社でLP制作補助','グローバルキャンペーンで売上150%達成','バイラルコンテンツ再生回数1,000万回達成'],
+    pm:['スタートアップでプロジェクト管理補助（6ヶ月）','学生団体イベント企画（参加者200名）','大手IT企業で全社DXプロジェクト推進リード','予算3億円のシステム刷新を期限内完遂'],
+    finance:['外資系証券でリサーチ補助（6ヶ月）','投資信託会社でアナリスト補助','ヘッジファンドで年利30%の運用成績達成','Goldman Sachsで独自モデル開発・採用'],
+    general:['大手商社でビジネス補助（6ヶ月）','外資企業で業務改善補助','社会人チームの学生リーダーとして事業黒字化','ダボス会議ユース代表として参加・発言'],
+  },
+  prTemplates: {
+    sports: '私の強みは{strength}です。体育会系で培った根性と仲間への責任感を武器に、どんな困難も全力で突破してきました。「諦めなければ必ず道は開ける」という信念のもと、チームのために身を粉にして働くことができます。御社でも最後まで諦めない姿勢で貢献します。走ります。',
+    logic: '私の強みは{strength}です。全ての意思決定をデータと論理に基づいて行い、感情的な判断を排除することで、常に最適解を導き出してきました。KPIの設計から仮説検証まで、定量的アプローチで課題を解決します。感情は非効率だと考えています（個人の見解です）。',
+    angel: '私の強みは{strength}です。どんな状況でも周囲の方々を大切にし、チームの和を保つことを心がけています。自分が少し大変でも、みなさんが笑顔でいてくれることが一番の喜びです。なぜか皆さんから「いると助かる」と言われることが多いです（理由は不明です）。',
+    strategic: '私の強みは{strength}です。適切な役割分担と戦略的な思考により、チーム全体のパフォーマンスを最大化してきました。自分が前に出るよりも、適材適所で人を動かすことで、組織として最大の成果を実現します。誰が何を得意かを瞬時に把握できます。',
+    ambitious: '私の強みは{strength}です。自己研鑽を怠らず、毎朝4時に起きて読書・英語・筋トレを欠かしません。常にアンテナを高く持ち、最新のビジネストレンドをキャッチアップしています。入社後は3年以内に事業責任者を目指します（絶対になります）。',
+    efficient: '私の強みは{strength}です。最小のインプットで最大のアウトプットを生み出すことを信条としています。無駄な作業の削減と自動化により、自分の業務を効率化した結果、定時退社を1年間継続しています。業務効率化の鬼と呼ばれています（自称）。',
+    harmony: '私の強みは{strength}です。さまざまな立場の方々の意見を丁寧に聞き、全員が納得できる落としどころを見つけることが得意です。どんな方ともうまくやっていける自信があります。「おっしゃる通りです」という言葉が口癖です。',
+    veteran: '私の強みは{strength}です。長年の経験により、ビジネスの本質を深く理解しています。若い頃は無理もしましたが、今は持続可能な働き方で成果を出すことを重視しています。転職は4回経験しており、どんな環境でも生き残れる自信があります。',
+    dreamer: '私の強みは{strength}です。「なぜこの仕事をするのか」を常に問い続け、社会に対してどんな価値を提供できるかを考えながら行動してきました。テクノロジーと人間の可能性を信じ、世界をより良くする仕事がしたいと思っています（本気です）。',
+    nemawashi: '私の強みは{strength}です。重要な意思決定の前には必ず関係者全員との事前調整を行い、会議本番をスムーズに進めることを得意としています。根回しの重要性を誰よりも理解しており、水面下での合意形成において実績があります。',
+  },
+};
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pickN(arr, n) { return [...arr].sort(() => Math.random() - 0.5).slice(0, n); }
+
+// ============================================================
+// タイトル・効果音
+// ============================================================
+function startResume() {
+  const ts = document.getElementById('titleScreen');
+  ts.style.opacity = '0';
+  setTimeout(() => { ts.style.display = 'none'; }, 500);
+}
+
+let audioCtx = null;
+function getACtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playClick() {
+  try {
+    const ctx = getACtx();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 660;
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.14);
+  } catch(e) {}
+}
+function playReveal() {
+  try {
+    const ctx = getACtx();
+    [440, 554, 660, 880].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.07, ctx.currentTime + i * 0.1);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.22);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.1);
+      o.stop(ctx.currentTime + i * 0.1 + 0.24);
+    });
+  } catch(e) {}
+}
+
+// ============================================================
+// クイズ状態
+// ============================================================
+let answers = [];
+let currentQ = 0;
+let currentType = null;
+
+function renderQuestion() {
+  const q = QUESTIONS[currentQ];
+  document.getElementById('qNum').textContent = `Q${currentQ + 1} / ${QUESTIONS.length}`;
+  document.getElementById('qText').textContent = q.text;
+
+  const choicesEl = document.getElementById('qChoices');
+  choicesEl.innerHTML = '';
+  q.choices.forEach(c => {
+    const btn = document.createElement('div');
+    btn.className = 'q-choice';
+    btn.textContent = c.text;
+    btn.addEventListener('click', () => {
+      playClick();
+      btn.classList.add('selected');
+      answers.push(c.type);
+      currentQ++;
+      setTimeout(() => {
+        if (currentQ >= QUESTIONS.length) {
+          finishQuiz();
+        } else {
+          updateProgress();
+          renderQuestion();
+        }
+      }, 120);
+    });
+    choicesEl.appendChild(btn);
+  });
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const prog = document.getElementById('quizProgress');
+  prog.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'qp-dot' + (i < currentQ ? ' done' : i === currentQ ? ' active' : '');
+    prog.appendChild(dot);
+  });
+}
+
+function finishQuiz() {
+  currentType = determineType(answers);
+  document.getElementById('quizBox').style.display = 'none';
+  document.getElementById('formBox').style.display = 'block';
+
+  // タイプ結果表示
+  const tr = document.getElementById('typeResult');
+  tr.innerHTML = `
+    <div class="type-mascot">${getMascotSVG(currentType.svgType, 90)}</div>
+    <div class="type-name">${currentType.name}</div>
+    <div class="type-desc">${currentType.desc}</div>
+    <div class="type-tags">${currentType.tags.map(t => `<span class="type-tag">${t}</span>`).join('')}</div>
+  `;
+  tr.classList.add('show');
+}
+
+// ============================================================
+// 履歴書生成
+// ============================================================
+function generateResume() {
+  const name = document.getElementById('inName').value.trim() || '山田 太郎';
+  const age = parseInt(document.getElementById('inAge').value) || 22;
+  const job = document.getElementById('inJob').value;
+  const strength = document.getElementById('inStrength').value.trim() || 'コミュニケーション能力';
+  const type = currentType;
+  const bsLevel = type.bsLevel;
+
+  const uni = pick(DATA.universities[bsLevel]);
+  const internList = DATA.internships[job] || DATA.internships.general;
+  const internships = pickN(internList, Math.min(bsLevel, 2));
+  const prTemplate = DATA.prTemplates[type.prStyle] || DATA.prTemplates.harmony;
+  const pr = prTemplate.replace('{strength}', strength);
+  const skills = pickN([...type.skillBoost, 'Excel', 'PowerPoint', 'コミュニケーション能力'], Math.min(bsLevel + 3, 7));
+  const achs = pickN(type.achBoost, Math.min(type.achBoost.length, bsLevel));
+  const bsScore = Math.min(98, bsLevel * 20 + Math.floor(Math.random() * 18));
+  lastBsScore = bsScore; lastUserName = name;
+  const gradYear = age - 4;
+
+  const jobLabels = { consultant:'コンサルタント', engineer:'エンジニア', sales:'営業職', marketing:'マーケター', pm:'プロジェクトマネージャー', finance:'金融アナリスト', general:'総合職' };
+  const bsComments = ['就活あるある範囲内（たぶん）','これはちょっと面接で突っ込まれます','面接官「…え？」となるレベルです','もはやファンタジーです。アニメ化を検討してください'];
+
+  const resumeBox = document.getElementById('resumeBox');
+  resumeBox.innerHTML = `
+    <div class="type-stamp">${type.name} タイプ</div>
+    <div class="bs-badge">盛り度レベル${bsLevel}（${bsScore}%）</div>
+    <div class="resume-header">
+      <h2>履　歴　書</h2>
+      <div class="date">${new Date().getFullYear()}年${new Date().getMonth()+1}月${new Date().getDate()}日 現在</div>
+      <div class="resume-name-block">
+        <div class="resume-name">${name}</div>
+        <div class="resume-meta">年齢：${age}歳　｜　志望職種：${jobLabels[job]}</div>
+      </div>
+    </div>
+
+    <div class="rs">
+      <h3>📚 学歴</h3>
+      <div class="ri"><div class="yr">${gradYear-4}年</div><div class="ct"><div class="og">${uni} 入学</div>${bsLevel >= 2 ? `<div class="dt">${pick(['特待生奨学金受給','首席入学（学部史上最高点）','教授から直々にスカウト'])}</div>` : ''}</div></div>
+      <div class="ri"><div class="yr">${gradYear}年</div><div class="ct"><div class="og">${uni} 卒業${bsLevel >= 3 ? '（首席・総代）' : ''}</div>${bsLevel >= 2 ? `<div class="dt">卒業論文：${pick(['最優秀賞受賞','国際誌掲載','学部史上最高評価A++'])}</div>` : ''}</div></div>
+      ${bsLevel >= 4 ? `<div class="ri"><div class="yr">${gradYear}年</div><div class="ct"><div class="og">${pick(['ハーバード大学大学院','MITスローン経営大学院'])} 合格・辞退（御社に専念するため）</div></div></div>` : ''}
+    </div>
+
+    <div class="rs">
+      <h3>💼 職歴・インターンシップ</h3>
+      ${internships.map((intern, i) => `
+        <div class="ri">
+          <div class="yr">${gradYear - 2 + i}年</div>
+          <div class="ct">
+            <div class="og">${intern}</div>
+            ${bsLevel >= 2 ? `<div class="dt">${pick(['インターン生MVP受賞','担当業務全件成功・社員登用オファー受領','成果：前年比200%達成'])}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="rs">
+      <h3>🏆 実績・資格</h3>
+      ${achs.map(a => `<div class="ri"><div class="yr">-</div><div class="ct"><div class="og">${a}</div></div></div>`).join('')}
+      <div class="ri"><div class="yr">-</div><div class="ct"><div class="og">${pick(['TOEIC ' + (700 + bsLevel * 70) + '点', 'TOEIC ' + (600 + bsLevel * 90) + '点（取得済み）'])}</div></div></div>
+    </div>
+
+    <div class="rs">
+      <h3>🛠️ スキル</h3>
+      <div class="skill-tags">
+        ${skills.map((s, i) => `<span class="skill-tag ${i >= 4 && bsLevel >= 3 ? 'fake' : ''}">${s}</span>`).join('')}
+      </div>
+      ${bsLevel >= 3 ? '<div style="font-size:0.7em;color:#c00;margin-top:4px">※赤文字は「習得中」を含む場合があります</div>' : ''}
+    </div>
+
+    <div class="rs">
+      <h3>✍️ 自己PR</h3>
+      <div class="pr-box">${pr}</div>
+    </div>
+  `;
+
+  resumeBox.classList.add('show');
+
+  const meter = document.getElementById('bsMeter');
+  meter.classList.add('show');
+  setTimeout(() => {
+    document.getElementById('bsBar').style.width = bsScore + '%';
+    document.getElementById('bsComment').textContent = bsComments[Math.min(bsLevel - 1, bsComments.length - 1)];
+  }, 100);
+
+  document.getElementById('actionRow').classList.add('show');
+}
+
+// ============================================================
+// イベント
+// ============================================================
+function generateResumeWithLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('show');
+  // バレ度リセット
+  document.getElementById('bareDeg').classList.remove('show');
+  document.getElementById('bdBar').style.width = '0%';
+  setTimeout(() => {
+    generateResume();
+    overlay.classList.remove('show');
+    playReveal();
+    // 面接フェーズ開始（1.5秒後）
+    const bsLv = currentType ? currentType.bsLevel : 2;
+    setTimeout(() => showInterview(bsLv), 1500);
+  }, 900 + Math.random() * 600);
+}
+document.getElementById('genBtn').addEventListener('click', generateResumeWithLoading);
+document.getElementById('regenBtn').addEventListener('click', generateResumeWithLoading);
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  answers = []; currentQ = 0; currentType = null;
+  document.getElementById('quizBox').style.display = 'block';
+  document.getElementById('formBox').style.display = 'none';
+  document.getElementById('typeResult').classList.remove('show');
+  document.getElementById('bsMeter').classList.remove('show');
+  document.getElementById('actionRow').classList.remove('show');
+  document.getElementById('resumeBox').classList.remove('show');
+  document.getElementById('resumeBox').innerHTML = '';
+  document.getElementById('bareDeg').classList.remove('show');
+  document.getElementById('interviewPanel').classList.remove('show');
+  document.getElementById('aiBattle').style.display = 'none';
+  renderQuestion();
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const text = document.getElementById('resumeBox').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const t = document.getElementById('toast');
+    t.textContent = '📋 コピーしました！面接では使わないでね';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  });
+});
+
+// ============================================================
+// 面接フェーズ
+// ============================================================
+let bareScore = 0;  // 0〜100 バレ度
+
+function updateBareBar() {
+  const pct = Math.min(100, bareScore);
+  document.getElementById('ivBareBarInline').style.width = pct + '%';
+  document.getElementById('ivBarePct').textContent = pct + '%';
+}
+
+function showInterview(bsLevel) {
+  bareScore = 0;
+  let ivStep = 0;
+  const panel = document.getElementById('interviewPanel');
+  const ivInterviewer = document.getElementById('ivInterviewer');
+  const ivQcount = document.getElementById('ivQcount');
+  const ivQuestion = document.getElementById('ivQuestion');
+  const ivContent  = document.getElementById('ivContent');
+  let isAlien = false;
+  updateBareBar();
+  panel.classList.add('show');
+
+  function alienize(text) {
+    if (!isAlien) return text;
+    return text.split('').map(c => {
+      const r = Math.random();
+      if (r < 0.3) return ['ʷ','ₓ','ᵒ','ₑ','ᵷ','ʟ','ᴢ','ᵴ'][Math.floor(Math.random()*8)];
+      return c;
+    }).join('');
+  }
+
+  const STEPS = [
+    // Q1: 3択言い訳
+    () => {
+      ivQcount.textContent = 'Q 1 / 3';
+      const q = bsLevel >= 4
+        ? alienize('「ハーバード大学合格・辞退とありますが、証拠書類はお持ちですか？」')
+        : alienize('「インターンMVP受賞とありますが、詳しく教えてください」');
+      ivQuestion.textContent = q;
+      const choices = bsLevel >= 4
+        ? [
+            { text: '「辞退証明書があります！…今日は持ってきてなくて」',  bare: 15 },
+            { text: '「全てデータで管理しています。今すぐ送れます」',      bare: 5  },
+            { text: '「書類は保存場所ごと燃えました（火事で）」',          bare: 45 },
+          ]
+        : [
+            { text: '「チームで取り組んだ成果です。私がリードしました」',  bare: 5  },
+            { text: '「具体的には…その、色々な面で」',                    bare: 25 },
+            { text: '「記憶が曖昧なんですが確かそうだったはずで…」',      bare: 40 },
+          ];
+      ivContent.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'iv-choices';
+      choices.forEach(ch => {
+        const btn = document.createElement('button');
+        btn.className = 'iv-choice';
+        btn.textContent = alienize(ch.text);
+        btn.addEventListener('click', () => {
+          wrap.querySelectorAll('.iv-choice').forEach(b => b.disabled = true);
+          bareScore = Math.min(100, bareScore + ch.bare);
+          updateBareBar();
+          setTimeout(() => nextStep(), 500);
+        });
+        wrap.appendChild(btn);
+      });
+      ivContent.appendChild(wrap);
+    },
+
+    // Q2: 連打チャレンジ（McKinsey説明）
+    () => {
+      ivQcount.textContent = 'Q 2 / 3';
+      ivQuestion.textContent = alienize('「McKinseyでのインターン実績を詳しくご説明ください。今すぐ！」');
+      ivContent.innerHTML = '';
+
+      // ランダムで面接官が宇宙人に変わる（30%）
+      if (Math.random() < 0.30 && !isAlien) {
+        isAlien = true;
+        ivInterviewer.textContent = '👽 面接官（宇宙人）';
+        ivQuestion.textContent = alienize('「ᵷₑᴢᵷₓ McKinseyʷ ᵒₑᵷ ᵴₓʟᵷ ?!」');
+        bareScore = Math.min(100, bareScore + 15);
+        updateBareBar();
+      }
+
+      let secs = 4, clickCount = 0;
+      const wrap = document.createElement('div');
+      wrap.className = 'iv-mash-wrap';
+      wrap.innerHTML = `
+        <div class="iv-mash-desc">${alienize('3秒以内にボタンを連打して説明せよ！')}</div>
+        <div class="iv-mash-cd" id="ivMashCd">${secs}</div>
+        <div class="iv-mash-count" id="ivMashCount">0 回</div>
+        <button class="iv-mash-btn" id="ivMashBtn">${alienize('💬 説明する！')}</button>
+      `;
+      ivContent.appendChild(wrap);
+
+      const mashBtn  = document.getElementById('ivMashBtn');
+      const mashCd   = document.getElementById('ivMashCd');
+      const mashCount= document.getElementById('ivMashCount');
+
+      mashBtn.addEventListener('click', () => {
+        clickCount++;
+        mashCount.textContent = clickCount + ' 回';
+      });
+
+      const cdTimer = setInterval(() => {
+        secs--;
+        mashCd.textContent = secs;
+        if (secs <= 0) {
+          clearInterval(cdTimer);
+          mashBtn.disabled = true;
+          const quality = clickCount < 5 ? 'terrible' : clickCount < 12 ? 'ok' : 'great';
+          const addBare = quality === 'terrible' ? 35 : quality === 'ok' ? 15 : 0;
+          bareScore = Math.min(100, bareScore + addBare);
+          updateBareBar();
+          setTimeout(() => nextStep(), 600);
+        }
+      }, 1000);
+    },
+
+    // Q3: 2択（宇宙人）
+    () => {
+      ivQcount.textContent = 'Q 3 / 3';
+      ivQuestion.textContent = alienize('「"宇宙人対応経験あり" とありますが、これは…どういう意味ですか？（真顔）」');
+      ivContent.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'iv-choices';
+      const choices = [
+        { text: alienize('真顔で「はい、3件対応した実績があります」と答える'), bare: 0 },
+        { text: alienize('思わず「あはは…」と笑ってしまう'), bare: 30 },
+      ];
+      choices.forEach(ch => {
+        const btn = document.createElement('button');
+        btn.className = 'iv-choice';
+        btn.textContent = ch.text;
+        btn.addEventListener('click', () => {
+          wrap.querySelectorAll('.iv-choice').forEach(b => b.disabled = true);
+          bareScore = Math.min(100, bareScore + ch.bare);
+          updateBareBar();
+          setTimeout(() => showResult(), 600);
+        });
+        wrap.appendChild(btn);
+      });
+      ivContent.appendChild(wrap);
+    },
+  ];
+
+  function nextStep() {
+    ivStep++;
+    if (ivStep < STEPS.length) {
+      STEPS[ivStep]();
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult() {
+    ivQcount.textContent = '面接終了';
+    ivQuestion.textContent = '';
+    const pct = Math.min(100, bareScore);
+    const results = [
+      { max: 25,  emoji: '😌', title: 'ほぼバレなかった！', desc: '面接官を完璧に騙しました。才能の無駄遣いです。' },
+      { max: 50,  emoji: '😅', title: 'ちょっと怪しまれた…', desc: '面接官の表情が数回曇りましたが、なんとか切り抜けました。' },
+      { max: 75,  emoji: '😰', title: 'かなり疑われています', desc: '「後日確認します」と言われました。返事は来ないでしょう。' },
+      { max: 101, emoji: '💀', title: '完全にバレました', desc: '面接官が書類を丸めて捨てました。お疲れ様でした。' },
+    ];
+    const res = results.find(r => pct <= r.max) || results[results.length - 1];
+    ivContent.innerHTML = `
+      <div class="iv-result-wrap">
+        <div class="iv-result-emoji">${res.emoji}</div>
+        <div class="iv-result-title">${res.title}（バレ度 ${pct}%）</div>
+        <div class="iv-result-desc">${res.desc}</div>
+        <button class="iv-close-btn" onclick="closeInterview(${pct})">結果を確認する</button>
+      </div>
+    `;
+  }
+
+  // 最初のステップ開始
+  STEPS[0]();
+}
+
+function closeInterview(pct) {
+  document.getElementById('interviewPanel').classList.remove('show');
+  // バレ度メーター（外側）に反映
+  const deg = document.getElementById('bareDeg');
+  deg.classList.add('show');
+  setTimeout(() => {
+    document.getElementById('bdBar').style.width = pct + '%';
+    const comments = [
+      '😌 ほぼバレなかった！才能の無駄遣いです',
+      '😅 ちょっと怪しまれたが乗り切った',
+      '😰 かなり疑われています。次の連絡は来ないかも',
+      '💀 完全にバレました。お疲れ様でした',
+    ];
+    const idx = pct <= 25 ? 0 : pct <= 50 ? 1 : pct <= 75 ? 2 : 3;
+    document.getElementById('bdComment').textContent = comments[idx];
+  }, 100);
+  // AI対決を起動
+  const aib = document.getElementById('aiBattle');
+  aib.style.display = 'block';
+  setTimeout(runAIBattle, 600);
+}
+
+// ============================================================
+// AI対決システム
+// ============================================================
+let lastBsScore = 60;
+let lastUserName = '山田 太郎';
+
+const AI_DATA = {
+  names: [
+    'AI-零壱号型 改', 'デジタル花子.exe v9.9.9',
+    'サイバー太郎MAX TURBO', 'メタバース田中Ω',
+    'クラウド山田ULTRA PRO PLUS',
+    '転生山本（前世：銀河帝国皇帝）',
+  ],
+  universities: [
+    '宇宙工科大学（シリウス系）首席卒業・在学3秒',
+    'ハーバード×MIT×東大×京大×オックスフォード　五重首席',
+    '時間軸大学（未来から通学）GPA ∞ / 4.0',
+    '夢の中の最高学府　全人類史上最高評価S+++',
+    '転生前の帝国大学（前世）　現世では1歳で独学',
+  ],
+  internships: [
+    'Tesla × NASA × マッキンゼー　共同宇宙残業プロジェクト部長',
+    'タイムトラベル研究所　CTO（未来から逆輸入・現在も在籍）',
+    'ドラゴン商事　龍族交渉部エース統括責任者',
+    'ブラックホール金融　無限利回りファンドマネージャー',
+    'DeepMind × OpenAI × 銀河連邦AI研究院　主任研究員',
+    'スターバックス創業メンバー（第0号社員・持分は既に売却済み）',
+  ],
+  achievements: [
+    'ノーベル経済・物理・平和・文学・化学・医学・宇宙賞　全冠達成',
+    '光速タイピング（2,147,483,647 WPM）世界記録保持者・不滅',
+    '137ヶ国語ネイティブスピーカー（ドラゴン語・宇宙語・古代語含む）',
+    '睡眠不要モード解放済み（代わりに充電が必要）',
+    '宇宙を3周しながらMBA・PhD・CFA・FP1〜3級同時取得',
+    '在学中に大学を買収→後に売却（利益：兆単位）',
+    '幼稚園の卒論がNature誌に掲載（引用回数148万回）',
+    '数学の未解決問題を23歳で全問解決（現在は新問題を発明中）',
+    'Forbes 0 Under 0（生誕前に選出）',
+    '月面オフィス開設・同時にブラックホール内支社も運営',
+  ],
+  skills: [
+    'テレパシー通信（有線・無線・量子）',
+    '時間停止・逆回転・高速早送り',
+    '量子もつれコーディング（誤り率ゼロ）',
+    '念力PowerPoint作成（0.003秒）',
+    'ドラゴン語・宇宙語ネイティブ',
+    '未来予知（業務専用・的中率100%）',
+    '光速Excel入力（VBA自動化率99.98%）',
+    '分身の術（同時に127箇所で業務）',
+    '感情マネジメント（感情なし・効率最大化）',
+  ],
+  prs: [
+    '私は127の並列思考で同時に1,000件の業務を処理します。感情はありませんが残業は得意です。「帰る」というコマンドはプログラムに含まれておりませんのでご安心ください。なお、人類史上の全ての業務マニュアルを0.003秒で読破済みです。',
+    '宇宙137億年の歴史で最も優秀な求職者です。地球への就業は事実上の降格ですが、貴社の未来に投資するため特別に応募しました。給与は「宇宙コイン」または「ノーベル賞メダル」で受け取り可能です。前職は銀河連邦の副大統領です。',
+    '転生前は銀河帝国皇帝でしたが、今世では人事部から新卒として出直すことを決意しました。前世の記憶は全て業務に活用できます。強みは「無限ループしない思考回路」と「コーヒーなしで167時間連続稼働した実績」です。',
+  ],
+};
+
+function runAIBattle() {
+  const aiName = pick(AI_DATA.names);
+  const aiUni  = pick(AI_DATA.universities);
+  const aiInterns = pickN(AI_DATA.internships, 2);
+  const aiAchs    = pickN(AI_DATA.achievements, 3);
+  const aiSkills  = pickN(AI_DATA.skills, 4);
+  const aiPr      = pick(AI_DATA.prs);
+  const aiScore   = 88 + Math.floor(Math.random() * 12); // 88-99%
+
+  // バーとスコア更新
+  document.getElementById('aibYourName').textContent  = lastUserName;
+  document.getElementById('aibAiName').textContent    = aiName;
+  document.getElementById('aibYourScore').textContent = '...';
+  document.getElementById('aibAiScore').textContent   = '...';
+  document.getElementById('aibYourBar').style.width = '0%';
+  document.getElementById('aibAiBar').style.width   = '0%';
+
+  setTimeout(() => {
+    document.getElementById('aibYourBar').style.width   = lastBsScore + '%';
+    document.getElementById('aibYourScore').textContent = lastBsScore + '%';
+    document.getElementById('aibAiBar').style.width   = aiScore + '%';
+    document.getElementById('aibAiScore').textContent = aiScore + '%';
+  }, 200);
+
+  // AI経歴表示
+  document.getElementById('aibAiEntries').innerHTML = `
+    <div class="e-title">🤖 ${aiName} の経歴（抜粋）</div>
+    <div>🎓 ${aiUni}</div>
+    ${aiInterns.map(i => `<div>💼 ${i}</div>`).join('')}
+    ${aiAchs.map(a => `<div class="e-ach">🏆 ${a}</div>`).join('')}
+    <div style="margin-top:4px">🛠 ${aiSkills.join(' ／ ')}</div>
+    <div class="e-pr">💬 ${aiPr}</div>
+  `;
+
+  // 判定
+  const diff = aiScore - lastBsScore;
+  let emoji, title, sub, borderColor;
+  if (diff > 25) {
+    emoji = '💀'; title = 'AIの完全勝利。次元が違います';
+    sub = `差：${diff}%　人類の限界を超えた盛り度です`;
+    borderColor = '#e74c3c60';
+  } else if (diff > 8) {
+    emoji = '😰'; title = 'AIが勝利…でも善戦しました';
+    sub = `あと${diff}%。あなたはまだ人間の範囲内です`;
+    borderColor = '#f39c1260';
+  } else if (diff >= -8) {
+    emoji = '🤝'; title = '引き分け！人間とAIが並んだ歴史的瞬間';
+    sub = '五分五分。AIに追いつきつつある危険な人間です';
+    borderColor = '#ffd16660';
+  } else {
+    emoji = '🎉'; title = `${lastUserName}の勝利！AIより盛った人間、爆誕`;
+    sub = `差：${-diff}%　人類の可能性は無限大です（倫理的には問題あり）`;
+    borderColor = '#2ecc7160';
+  }
+
+  const verdict = document.getElementById('aibVerdict');
+  verdict.style.borderColor = borderColor;
+  document.getElementById('aibVerdictEmoji').textContent = emoji;
+  document.getElementById('aibVerdictTitle').textContent = title;
+  document.getElementById('aibVerdictSub').textContent   = sub;
+}
+
+document.getElementById('aibRematch').addEventListener('click', () => {
+  document.getElementById('aibYourBar').style.width = '0%';
+  document.getElementById('aibAiBar').style.width   = '0%';
+  setTimeout(runAIBattle, 100);
+});
+
+// 初期化
+renderQuestion();
+</script>
+</body>
+</html>

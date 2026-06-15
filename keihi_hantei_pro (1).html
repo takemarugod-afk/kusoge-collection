@@ -1,0 +1,2135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>これは経費で落とせますか？ Pro</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0a0a16;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, transparent 1px, transparent 28px, rgba(255,255,255,0.012) 29px);
+    color: #e0e0e0;
+    font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+    text-align: center;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 1.4em;
+    margin: 10px 0 2px;
+    color: #ffd166;
+  }
+  .sub {
+    color: #666;
+    margin-bottom: 14px;
+    font-size: 0.85em;
+  }
+
+  /* ステータスバー */
+  .statusbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+  .badge {
+    background: #14142a;
+    border: 1px solid #2a2a50;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.82em;
+    box-shadow: none;
+  }
+  .badge b { color: #ffd166; }
+
+  input {
+    font-size: 1.1em;
+    padding: 14px;
+    width: 300px;
+    max-width: 88vw;
+    border: 2px solid #3a3a60;
+    border-radius: 8px;
+    text-align: center;
+    background: #14142a;
+    color: #eee;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: #ffd166; }
+  input::placeholder { color: #444; }
+  button#judge {
+    font-size: 1.15em;
+    padding: 14px 38px;
+    margin-top: 12px;
+    background: #ffd166;
+    color: #0a0a16;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    display: block;
+    margin: 12px auto 0;
+    transition: transform 0.08s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+  button#judge:active { transform: scale(0.95); }
+
+  /* 結果カード（用紙風） */
+  .paper {
+    margin-top: 28px;
+    width: 360px;
+    max-width: 92vw;
+    min-height: 180px;
+    background: #fffdf6;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    padding: 24px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .paper .itemname {
+    font-size: 0.95em;
+    color: #555;
+    text-align: left;
+    border-bottom: 1px dashed #ccc;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+
+  /* ハンコ */
+  .stamp-wrap {
+    position: relative;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stamp {
+    font-size: 2.6em;
+    font-weight: bold;
+    padding: 11px 32px;
+    border: 8px solid;
+    border-radius: 14px;
+    display: inline-block;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transform: translateY(-340px) rotate(-30deg) scale(2.8);
+    will-change: transform, opacity;
+  }
+  .stamp.show {
+    animation: stampDown 0.68s cubic-bezier(.12,1.6,.45,1) forwards;
+  }
+  @keyframes stampDown {
+    0%   { opacity: 0;   transform: translateY(-340px) rotate(-30deg) scale(2.8); filter: blur(5px); }
+    35%  { opacity: 1;   filter: blur(0); }
+    62%  { transform: translateY(20px)  rotate(-9.5deg) scale(0.82); }
+    75%  { transform: translateY(-12px) rotate(-8deg)   scale(1.12); }
+    86%  { transform: translateY(6px)   rotate(-8deg)   scale(0.96); }
+    93%  { transform: translateY(-2px)  rotate(-8deg)   scale(1.02); }
+    100% { opacity: 1;   transform: translateY(0)       rotate(-8deg)   scale(1); filter: none; }
+  }
+  /* ハンコ着地時の追加リング */
+  .stamp-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid;
+    pointer-events: none;
+    animation: stampRingOut 0.5s ease-out forwards;
+  }
+  @keyframes stampRingOut {
+    0%   { transform: scale(0.2); opacity: 0.9; }
+    100% { transform: scale(4);   opacity: 0; }
+  }
+  .ok    { color: #c0392b; border-color: #c0392b; }
+  .no    { color: #2980b9; border-color: #2980b9; }
+  .micro { color: #8e44ad; border-color: #8e44ad; }
+
+  .shake { animation: shakePaper 0.4s; }
+  @keyframes shakePaper {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px) rotate(-1deg); }
+    40% { transform: translateX(6px) rotate(1deg); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .reason {
+    margin-top: 16px;
+    font-size: 0.98em;
+    line-height: 1.6;
+    color: #444;
+    min-height: 3em;
+  }
+
+  /* 紙吹雪 */
+  .confetti {
+    position: fixed;
+    top: -10px;
+    width: 8px;
+    height: 14px;
+    z-index: 999;
+    pointer-events: none;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to {
+      transform: translateY(110vh) rotate(720deg);
+      opacity: 0.3;
+    }
+  }
+
+  /* 履歴 */
+  .history {
+    margin-top: 16px;
+    width: 360px;
+    max-width: 92vw;
+    text-align: left;
+    background: #10101e;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .history h2 {
+    font-size: 0.9em;
+    color: #555;
+    margin: 0 0 6px;
+  }
+  .history ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.85em;
+  }
+  .history li {
+    padding: 4px 8px;
+    border-bottom: 1px solid #1a1a30;
+    display: flex;
+    justify-content: space-between;
+  }
+  .tag {
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 1px 8px;
+    font-size: 0.85em;
+  }
+  .tag.ok { background: #fdecea; color: #c0392b; }
+  .tag.no { background: #eaf3fb; color: #2980b9; }
+  .tag.micro { background: #f4ecf7; color: #8e44ad; }
+
+  /* 実績 */
+  .achievements {
+    margin-top: 16px;
+    width: 360px;
+    max-width: 92vw;
+    background: #10101e;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .achievements h2 {
+    font-size: 0.9em;
+    color: #555;
+    margin: 0 0 8px;
+  }
+  .ach-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .ach {
+    font-size: 0.75em;
+    padding: 6px 10px;
+    border-radius: 20px;
+    border: 1px solid #2a2a45;
+    background: #14142a;
+    color: #444;
+  }
+  .ach.unlocked {
+    background: #2a240a;
+    color: #ffd166;
+    border-color: #6a5500;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #14142a;
+    border: 1px solid #3a3a60;
+    color: #ffd166;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* SNS共有ボタン */
+  .share-area {
+    margin-top: 16px;
+    width: 360px;
+    max-width: 92vw;
+    text-align: center;
+    background: #10101e;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .share-label {
+    font-size: 0.82em;
+    color: #555;
+    margin: 0 0 8px;
+  }
+  .share-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .share-btn {
+    font-size: 0.85em;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    font-family: inherit;
+    transition: transform 0.1s, opacity 0.1s;
+  }
+  .share-btn:active { transform: scale(0.93); opacity: 0.8; }
+  .share-btn.twitter { background: #111; color: #fff; }
+  .share-btn.line    { background: #06c755; color: #fff; }
+  .share-btn.copy    { background: #14142a; color: #aaa; border: 1px solid #2a2a50; }
+
+  /* ===== 演出追加 ===== */
+
+  /* 全画面フラッシュ */
+  #flash {
+    position:fixed; inset:0;
+    pointer-events:none; z-index:9999; opacity:0;
+  }
+  #flash.go { animation: flashAnim 0.45s forwards; }
+  @keyframes flashAnim {
+    0%  { opacity: 0.75; }
+    100%{ opacity: 0; }
+  }
+
+  /* 画面シェイク */
+  @keyframes screenShake {
+    0%,100%{ transform:translate(0,0) rotate(0); }
+    15%    { transform:translate(-10px, 4px) rotate(-0.5deg); }
+    30%    { transform:translate(10px,-4px) rotate(0.5deg); }
+    45%    { transform:translate(-7px, 2px) rotate(-0.3deg); }
+    60%    { transform:translate(7px,-2px) rotate(0.3deg); }
+    80%    { transform:translate(-3px, 1px); }
+  }
+  body.shaking { animation: screenShake 0.5s; }
+
+  /* ボタンシマー */
+  button#judge { position:relative; overflow:hidden; }
+  button#judge::after {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent);
+    transform:translateX(-100%);
+  }
+  button#judge:hover::after { animation:btnShimmer 0.6s forwards; }
+  @keyframes btnShimmer { to { transform:translateX(100%); } }
+  button#judge.charging { animation:btnCharge 0.7s; }
+  @keyframes btnCharge {
+    0%  { box-shadow:0 0 0 0 rgba(44,62,80,0.5); }
+    70% { box-shadow:0 0 0 14px rgba(44,62,80,0); }
+    100%{ box-shadow:0 0 0 0  rgba(44,62,80,0); }
+  }
+
+  /* タイトル浮遊 */
+  h1 { animation:titleFloat 4s ease-in-out infinite; }
+  @keyframes titleFloat {
+    0%,100%{ transform:translateY(0); }
+    50%    { transform:translateY(-5px); }
+  }
+
+  /* 審査中ローディング */
+  .loading-slot {
+    display:none; flex-direction:column;
+    align-items:center; gap:12px; padding:28px 0;
+  }
+  .loading-slot.show { display:flex; }
+  .slot-text {
+    font-size:1.05em; font-weight:bold;
+    color:#888; letter-spacing:0.12em;
+    min-height:1.5em; animation:slotPop 0.18s;
+  }
+  @keyframes slotPop { 0%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  .slot-dots { display:flex; gap:7px; }
+  .slot-dot {
+    width:10px; height:10px; background:#3a3a60;
+    border-radius:50%; animation:dotBounce 0.7s infinite;
+  }
+  .slot-dot:nth-child(2){ animation-delay:0.15s; }
+  .slot-dot:nth-child(3){ animation-delay:0.30s; }
+  @keyframes dotBounce {
+    0%,100%{ transform:translateY(0); opacity:0.3; }
+    50%    { transform:translateY(-8px); opacity:1; }
+  }
+
+  /* タイトル画面 */
+  #titleScreen {
+    position: fixed; inset: 0;
+    background: #0a0a16;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, transparent 1px, transparent 28px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 4000; padding: 24px;
+    text-align: center;
+    transition: opacity 0.5s;
+  }
+  #titleScreen h2 {
+    font-size: 1.5em; color: #ffd166;
+    margin: 16px 0 10px; line-height: 1.4;
+    animation: titleFloat 4s ease-in-out infinite;
+  }
+  #titleScreen p {
+    color: #666; font-size: 0.88em;
+    line-height: 1.8; max-width: 280px; margin: 0 0 8px;
+  }
+  .title-fax { font-size: 4em; margin-bottom: 4px; animation: titleFloat 4s ease-in-out infinite; }
+  .title-start-btn {
+    margin-top: 28px; padding: 16px 44px;
+    background: #ffd166; color: #0a0a16;
+    border: none; border-radius: 10px;
+    font-size: 1.15em; font-weight: bold;
+    cursor: pointer; font-family: inherit;
+    transition: transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(255,209,102,0.3);
+  }
+  .title-start-btn:active { transform: scale(0.96); }
+  .title-hint { margin-top: 18px; font-size: 0.72em; color: #333; }
+
+  /* パーティクル */
+  .p-coin,.p-cross,.p-confetti {
+    position:fixed; top:-32px;
+    pointer-events:none; z-index:998;
+    animation:pFall linear forwards;
+  }
+  .p-coin   { font-size:1.5em; }
+  .p-cross  { font-size:1.3em; }
+  .p-confetti { width:9px; height:15px; }
+  @keyframes pFall {
+    to { transform:translateY(115vh) rotate(900deg); opacity:0; }
+  }
+
+  /* インクしぶき */
+  .ink-dot {
+    position:fixed; border-radius:50%;
+    pointer-events:none; z-index:997;
+    animation:inkPop 0.55s forwards;
+  }
+  @keyframes inkPop {
+    0%  { transform:scale(0); opacity:0.95; }
+    60% { transform:scale(1);  opacity:0.7; }
+    100%{ transform:scale(1.7); opacity:0; }
+  }
+
+  /* 衝撃波リング */
+  .shockwave {
+    position:fixed; border:4px solid;
+    border-radius:50%; pointer-events:none; z-index:996;
+    animation:shockOut 0.55s forwards;
+  }
+  @keyframes shockOut {
+    0%  { transform:scale(0); opacity:0.9; }
+    100%{ transform:scale(3.5); opacity:0; }
+  }
+
+  /* スタンプグロー */
+  .glow-ok    { filter:drop-shadow(0 0 10px #c0392b) drop-shadow(0 0 22px #c0392b66); }
+  .glow-no    { filter:drop-shadow(0 0 10px #2980b9) drop-shadow(0 0 22px #2980b966); }
+  .glow-micro { filter:drop-shadow(0 0 10px #8e44ad) drop-shadow(0 0 22px #8e44ad66); }
+
+  /* 背景パルス */
+  body.pulse-ok    { animation:bgPulseOk    0.55s; }
+  body.pulse-no    { animation:bgPulseNo    0.55s; }
+  body.pulse-micro { animation:bgPulseMicro 0.55s; }
+  @keyframes bgPulseOk    { 50%{ background-color:#2a0808; } }
+  @keyframes bgPulseNo    { 50%{ background-color:#08102a; } }
+  @keyframes bgPulseMicro { 50%{ background-color:#180a2a; } }
+
+  /* ランクアップ */
+  #rankup {
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0);
+    background:linear-gradient(135deg,#f1c40f,#e67e22);
+    color:#fff; padding:22px 46px; border-radius:18px;
+    font-size:1.2em; font-weight:bold; z-index:2000;
+    text-align:center; line-height:1.7;
+    box-shadow:0 8px 32px rgba(0,0,0,0.35);
+    pointer-events:none; opacity:0;
+  }
+  #rankup.show { animation:rankupPop 2.8s forwards; }
+  @keyframes rankupPop {
+    0%  { transform:translate(-50%,-50%) scale(0);    opacity:0; }
+    12% { transform:translate(-50%,-50%) scale(1.12); opacity:1; }
+    22% { transform:translate(-50%,-50%) scale(1); }
+    75% { transform:translate(-50%,-50%) scale(1);    opacity:1; }
+    100%{ transform:translate(-50%,-50%) scale(0.7);  opacity:0; }
+  }
+
+  /* 用紙くしゃくしゃ */
+  @keyframes crumple {
+    0%,100%{ transform:skew(0deg); }
+    25%    { transform:skew(-2.5deg,1deg) scale(0.98); }
+    50%    { transform:skew(2.5deg,-1deg) scale(0.97); }
+    75%    { transform:skew(-1.2deg,0.5deg) scale(0.99); }
+  }
+  .paper.crumple { animation:crumple 0.45s; }
+
+  /* 理由タイプライター用カーソル */
+  #reason::after {
+    content:'▋';
+    animation:cursorBlink 0.7s step-end infinite;
+    opacity:0;
+  }
+  #reason.typing::after { opacity:1; }
+  @keyframes cursorBlink { 50%{ opacity:0; } }
+
+  /* 演出図鑑 */
+  .effects-catalog { margin-top: 16px; margin-bottom: 28px; width: 360px; max-width: 92vw; background: #10101e; border-radius: 10px; padding: 12px 14px; }
+  .effects-catalog h2 { font-size: 0.9em; color: #555; margin: 0 0 4px; }
+  .effects-sub { font-size: 0.76em; color: #444; margin: 0 0 10px; }
+  .effects-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .effect-card {
+    background: #0a0a18; border: 1px solid #1a1a30;
+    border-radius: 10px; padding: 8px 4px 6px;
+    text-align: center; font-size: 0.67em;
+    color: #2a2a45; cursor: default; transition: all 0.3s;
+  }
+  .effect-emoji {
+    font-size: 1.65em; display: block; margin-bottom: 3px;
+    filter: grayscale(1) opacity(0.18); transition: filter 0.3s;
+  }
+  .effect-card.seen { background:#14142a; color:#888; border-color:#2a2a50; box-shadow:0 2px 8px rgba(0,0,0,0.35); }
+  .effect-card.seen .effect-emoji { filter: none; }
+  .effect-card.just-seen { animation: effectPop 0.5s; }
+  @keyframes effectPop { 0%,100%{transform:scale(1)} 40%{transform:scale(1.2)} }
+  .effect-cond { font-size:0.82em; margin-top:2px; color:#2a2a45; }
+  .effect-card.seen .effect-cond { color:#2ecc71; font-weight:bold; }
+
+  /* ===== 上司の追加審査 ===== */
+  #bossReview {
+    display:none; width:360px; max-width:92vw;
+    background:#0e0e22; border:2px solid #ffd16666;
+    border-radius:12px; padding:14px 16px; margin-top:10px;
+    text-align:center;
+  }
+  #bossReview.show { display:block; }
+  .boss-label { font-size:0.9em; color:#ffd166; font-weight:bold; margin-bottom:5px; letter-spacing:0.04em; }
+  .boss-desc  { font-size:0.78em; color:#666; margin-bottom:10px; }
+  .boss-cd-wrap { height:6px; background:#1a1a30; border-radius:3px; margin-bottom:12px; overflow:hidden; }
+  .boss-cd-bar  { height:100%; width:100%; border-radius:3px; transition:width 0.95s linear, background 0.3s; }
+  .boss-btn {
+    width:100%; padding:14px; background:#ffd166; color:#0a0a16;
+    border:none; border-radius:8px; font-size:1em; font-weight:bold;
+    cursor:pointer; font-family:inherit;
+    animation:bossBtnPulse 0.7s ease-in-out infinite alternate;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .boss-btn:active { transform:scale(0.96); }
+  .boss-btn:disabled { opacity:0.35; animation:none; cursor:not-allowed; }
+  @keyframes bossBtnPulse { to { box-shadow:0 0 18px rgba(255,209,102,0.6); } }
+  .boss-outcome { font-size:0.84em; margin-top:9px; min-height:18px; }
+
+  /* 謎の経費ボタン */
+  #mysteryBtn {
+    font-size:0.9em; padding:11px 22px; margin-top:8px;
+    background:#14122a; color:#a78bfa;
+    border:1px solid #3a2a60; border-radius:8px;
+    cursor:pointer; font-family:inherit; display:block; margin:8px auto 0;
+    transition:transform 0.1s, border-color 0.2s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #mysteryBtn:hover { border-color:#a78bfa; }
+  #mysteryBtn:active { transform:scale(0.95); }
+  #mysteryBtn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  /* カオスオーバーレイ共通 */
+  .chaos-ov {
+    display:none; position:fixed; inset:0;
+    background:rgba(4,2,14,0.93); z-index:3500;
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+  }
+  .chaos-ov.show { display:flex; }
+  .co-emoji { font-size:3.5em; margin-bottom:8px; }
+  .co-title { font-size:1.15em; font-weight:bold; color:#ffd166; margin-bottom:8px; letter-spacing:0.03em; }
+  .co-desc  { font-size:0.86em; color:#aaa; line-height:1.7; margin-bottom:14px; max-width:280px; white-space:pre-line; }
+  .co-cd    { font-size:2.4em; font-weight:bold; color:#e74c3c; margin-bottom:12px;
+              font-variant-numeric:tabular-nums; animation:cdTick 0.8s ease-in-out infinite alternate; }
+  @keyframes cdTick { to { opacity:0.45; transform:scale(0.9); } }
+  .co-btn {
+    padding:14px 36px; background:#e74c3c; color:#fff;
+    border:none; border-radius:10px; font-size:1.05em; font-weight:bold;
+    cursor:pointer; font-family:inherit;
+    animation:coGlow 0.5s ease-in-out infinite alternate;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .co-btn:active { transform:scale(0.95); }
+  .co-btn:disabled { opacity:0.4; animation:none; cursor:not-allowed; }
+  @keyframes coGlow { to { box-shadow:0 0 24px rgba(231,76,60,0.75); } }
+  .co-result { font-size:0.9em; margin-top:12px; }
+
+  /* ハンコ逃亡ゲーム */
+  #stampChase { position:relative; width:280px; height:160px;
+    background:#10101e; border:1px solid #2a2a50; border-radius:10px; margin-bottom:14px; }
+  .runaway-stamp {
+    position:absolute; font-size:1.8em; cursor:pointer;
+    transition:all 0.18s; user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+
+  /* 経理部長オーバーレイ */
+  #chiefOverlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(4,2,14,0.9); z-index:3200;
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+  }
+  #chiefOverlay.show { display:flex; }
+</style>
+</head>
+<body>
+
+  <!-- タイトル画面 -->
+  <div id="titleScreen">
+    <div class="title-fax">📠</div>
+    <h2>これは経費で落とせますか？<br><span style="font-size:1.2em;letter-spacing:0.05em">Pro</span></h2>
+    <p>品目を入力すると<br>謎の経理AIが経費申請を裁きます。<br>承認・却下・一部承認の3種判定と<br>演出図鑑コレクションが楽しめます。</p>
+    <button class="title-start-btn" onclick="startApp()">📋 審査を開始する</button>
+    <div class="title-hint">💡 品目を入力するだけで遊べます</div>
+  </div>
+
+  <h1>📠 これは経費で落とせますか？ Pro 📠</h1>
+  <div class="sub">品目を入力すると、謎の経理AIが裁きます</div>
+
+  <div class="statusbar">
+    <div class="badge">ランク：<b id="rank">新人</b></div>
+    <div class="badge">承認連続：<b id="streak">0</b></div>
+    <div class="badge">判定数：<b id="total">0</b></div>
+  </div>
+
+  <input id="item" type="text" placeholder="例：キャバクラ代、観葉植物、漫画全巻セット">
+  <button id="judge">判定する</button>
+  <button id="mysteryBtn">🎲 謎の経費を申請する</button>
+
+  <div class="paper" id="paper">
+    <div class="itemname" id="itemname">品目：(まだ判定していません)</div>
+    <div class="loading-slot" id="loadingSlot">
+      <div class="slot-text" id="slotText">審査中...</div>
+      <div class="slot-dots">
+        <div class="slot-dot"></div>
+        <div class="slot-dot"></div>
+        <div class="slot-dot"></div>
+      </div>
+    </div>
+    <div id="resultContent">
+      <div class="stamp-wrap">
+        <div class="stamp" id="stamp"></div>
+      </div>
+      <div class="reason" id="reason">入力して「判定する」を押してみてね。</div>
+    </div>
+  </div>
+
+  <!-- 上司の追加審査パネル -->
+  <div id="bossReview">
+    <div class="boss-label">👔 上司の追加審査</div>
+    <div class="boss-desc" id="bossDesc">上司が書類を確認中です。3秒以内に確認を取れ！</div>
+    <div class="boss-cd-wrap"><div class="boss-cd-bar" id="bossCdBar"></div></div>
+    <button class="boss-btn" id="bossCdBtn">📋 今すぐ上司に確認を取る！</button>
+    <div class="boss-outcome" id="bossOutcome"></div>
+  </div>
+
+  <!-- カオスオーバーレイ -->
+  <div class="chaos-ov" id="chaosOv">
+    <div class="co-emoji" id="coEmoji"></div>
+    <div class="co-title" id="coTitle"></div>
+    <div class="co-desc"  id="coDesc"></div>
+    <div class="co-cd"   id="coCd"></div>
+    <div id="stampChase"></div>
+    <button class="co-btn" id="coBtn"></button>
+    <div class="co-result" id="coResult"></div>
+  </div>
+
+  <!-- 経理部長オーバーレイ -->
+  <div id="chiefOverlay">
+    <div style="font-size:3em;margin-bottom:10px">😤</div>
+    <div style="font-size:1.15em;font-weight:bold;color:#e74c3c;margin-bottom:8px">経理部長が現れた！</div>
+    <div style="font-size:0.86em;color:#aaa;line-height:1.8;max-width:280px;margin-bottom:20px" id="chiefMsg"></div>
+    <button onclick="document.getElementById('chiefOverlay').classList.remove('show')"
+      style="padding:12px 28px;background:#e74c3c;color:#fff;border:none;border-radius:8px;font-size:0.95em;font-weight:bold;cursor:pointer;font-family:inherit">
+      す、すみません…
+    </button>
+  </div>
+
+  <div class="share-area" id="shareArea" style="display:none;">
+    <p class="share-label">この結果をシェアする：</p>
+    <div class="share-btns">
+      <button class="share-btn twitter" id="shareTwitter">𝕏 でシェア</button>
+      <button class="share-btn line" id="shareLine">LINE でシェア</button>
+      <button class="share-btn copy" id="shareCopy">📋 コピー</button>
+    </div>
+  </div>
+
+  <div class="history">
+    <h2>判定履歴</h2>
+    <ul id="historyList"></ul>
+  </div>
+
+  <div class="achievements">
+    <h2>🏆 実績</h2>
+    <div class="ach-grid" id="achGrid"></div>
+  </div>
+
+  <div class="effects-catalog">
+    <h2>🎬 演出図鑑</h2>
+    <p class="effects-sub">判定で発動した演出を収集しよう！</p>
+    <div class="effects-grid" id="effectsGrid"></div>
+  </div>
+
+  <div id="flash"></div>
+  <div id="rankup"></div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  // ---------- タイトル画面 ----------
+  function startApp() {
+    const ts = document.getElementById('titleScreen');
+    ts.style.opacity = '0';
+    setTimeout(() => { ts.style.display = 'none'; input.focus(); }, 500);
+  }
+
+  const input = document.getElementById('item');
+  const btn = document.getElementById('judge');
+  const paper = document.getElementById('paper');
+  const itemnameEl = document.getElementById('itemname');
+  const stampEl = document.getElementById('stamp');
+  const reasonEl = document.getElementById('reason');
+  const historyList = document.getElementById('historyList');
+  const rankEl = document.getElementById('rank');
+  const streakEl = document.getElementById('streak');
+  const totalEl = document.getElementById('total');
+  const achGrid = document.getElementById('achGrid');
+  const toast = document.getElementById('toast');
+
+  // ---------- 音声 ----------
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playStampSound(type) {
+    try {
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      const now = ctx.currentTime;
+
+      // インパクトノイズ
+      const bufSize = Math.floor(ctx.sampleRate * 0.13);
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(Math.max(0, 1 - i / (bufSize * 0.25)), 2.5);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+
+      const lpf = ctx.createBiquadFilter();
+      lpf.type = 'lowpass';
+      lpf.frequency.value = type === 'ok' ? 380 : (type === 'no' ? 160 : 260);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(type === 'micro' ? 0.7 : 1.4, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      // 低音ドンッ
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(type === 'ok' ? 90 : (type === 'no' ? 48 : 68), now);
+      osc.frequency.exponentialRampToValueAtTime(18, now + 0.1);
+
+      const oscGain = ctx.createGain();
+      oscGain.gain.setValueAtTime(type === 'micro' ? 0.35 : 0.75, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+
+      noise.connect(lpf); lpf.connect(noiseGain); noiseGain.connect(ctx.destination);
+      osc.connect(oscGain); oscGain.connect(ctx.destination);
+
+      noise.start(now); noise.stop(now + 0.16);
+      osc.start(now);   osc.stop(now + 0.15);
+    } catch(e) { /* 音声非対応環境は無視 */ }
+  }
+
+  // ---------- データ ----------
+
+  // {item} を品目名で置換するヘルパー
+  function fill(template, item) {
+    return template.replace(/\{item\}/g, item);
+  }
+
+  // フォールバック用汎用理由（{item} 入り）
+  const genericReasons = {
+    ok: [
+      '「{item}」は業務上の必要性が認められます。承認します。',
+      '「{item}」について、「自己投資」という名目で全額承認します。',
+      '社長も「{item}」と似たようなものを経費で落としていたので問題なしです。',
+      '「{item}」は福利厚生費として無理やり通します。',
+      '出張中の「{item}」だったので致し方ありません。承認です。',
+      '「{item}」の領収書がギリギリ読めたので承認とします。',
+      '今期は予算が余っているので「{item}」もOKです。',
+      '「{item}」に「打ち合わせ」と書けば通る、という社内慣習に従いました。',
+      '深夜残業の対価として「{item}」を文句なしで承認です。',
+      '経理部長が「{item}」と同じものを持っていたため、満場一致で承認です。',
+      '「必要経費」の定義を広めに解釈し、「{item}」を承認とします。',
+      '監査が来るのは来年なので「{item}」は今は大丈夫です。',
+    ],
+    no: [
+      '「{item}」は私用利用が確認されたため、却下します。',
+      '「{item}」の領収書の宛名が「上様」では通せません。',
+      '「{item}」、それ家にあるやつと同じ用途では？却下。',
+      '「{item}」は経理担当の好みではないため、却下とします。',
+      '「{item}」の申請には稟議書3枚を追加でご提出ください（実質却下）。',
+      '「{item}」は監査でツッコまれそうなので、自腹でお願いします。',
+      '「{item}」を「会議費」にするには無理があります。却下。',
+      '「{item}」は前回も同じ申請をしていますね。学習機能により却下します。',
+      '「{item}」？経費精算システムに「常識で考えて」と表示されました。',
+      '「{item}」の申請は予算オーバーのため、来年度に再申請してください（来年度も無理）。',
+      '「{item}」は趣味では？という心の声が出力されました。却下。',
+      '総務部より「{item}」について「いい加減にしてください」とのコメントが届いています。',
+    ],
+    micro: [
+      '「{item}」は半分だけ会社、半分だけ自分の財布、という謎の判定です。',
+      '「{item}」は経費にはなりますが、来年から規定が変わるので今回だけです。',
+      '「{item}」の判定は上長の機嫌次第で変わる不安定な状況です。一部承認。',
+      '「{item}」、経費精算システムが一時的にバグっていてなぜか通りました。',
+      '「{item}」に「次は気をつけてください」という謎の説教付きで一部承認です。',
+      '「{item}」は全額ではなく、なぜか573円だけ承認されました。',
+      '「{item}」の承認はしますが、来月の全体会議で説明してください。',
+      '「{item}」の判定がコイントスで決まりました。今回は半分勝ちです。',
+      '「{item}」は「特例」として処理しますが、二度目はありません（たぶん）。',
+    ],
+  };
+
+  // カテゴリ別判定ルール（w = マッチ優先度ウェイト）
+  const categories = [
+    // ナイトライフ
+    { w: 10, keys: ['キャバクラ', 'ホスト', '風俗', 'スナック', 'クラブ', 'ラウンジ', 'ガールズバー'],
+      stamp: 'no', reasons: [
+        '「{item}」は「接待」ではなく「人生経験」です。却下します。',
+        '「{item}」の領収書を見た瞬間、経理が石になりました。却下。',
+        '経費精算で一番見たくない単語ランキング堂々1位。「{item}」却下。',
+        '「{item}」…領収書の店名が問題外です。即却下。',
+      ]},
+    // タクシー
+    { w: 10, keys: ['タクシー', 'ウーバー', 'Uber', 'タクシー代'],
+      stamp: 'ok', reasons: [
+        '終電後の「{item}」は文明国家の権利です。承認。',
+        '深夜の「{item}」は正義。胸を張って承認します。',
+        '「{item}」、行き先が会社方面であれば問題なし。承認です。',
+      ]},
+    // 電車・公共交通
+    { w: 9, keys: ['電車', '地下鉄', 'バス', 'モノレール', '交通費', 'ICカード', 'Suica', 'PASMO'],
+      stamp: 'ok', reasons: [
+        '「{item}」は交通費として問題なく承認します。',
+        '「{item}」、ICカードの明細で承認します。',
+        '公共交通機関の「{item}」利用は模範的です。承認。',
+      ]},
+    // 新幹線・出張
+    { w: 9, keys: ['新幹線', '出張', '旅費', '特急', '急行'],
+      stamp: 'ok', reasons: [
+        '「{item}」、移動中も仕事ができる建前で承認します。',
+        '業務出張としての「{item}」は承認。領収書を保管してください。',
+        '「{item}」は全額承認。乗車証明書を添付してください。',
+      ]},
+    // グリーン車・ビジネスクラス
+    { w: 10, keys: ['グリーン車', 'ビジネスクラス', 'ファーストクラス', 'プレミアム'],
+      stamp: 'micro', reasons: [
+        '「{item}」…部長以上の特権ですが、今回は特別に半額承認します。',
+        '「{item}」は贅沢ですが、長距離出張ということで一部承認します。',
+        '「{item}」に乗る理由を上司に説明できれば一部承認とします。',
+      ]},
+    // 飛行機
+    { w: 9, keys: ['飛行機', '航空', 'ANA', 'JAL', '航空券', '搭乗'],
+      stamp: 'ok', reasons: [
+        '「{item}」は出張費として承認します。エコノミーの範囲で。',
+        '業務上の「{item}」は全額承認。領収書必須です。',
+        '「{item}」、目的地が業務地なら問題なし。承認。',
+      ]},
+    // レンタカー・ガソリン
+    { w: 8, keys: ['レンタカー', 'カーシェア', 'ガソリン', '駐車場', '高速代', 'ETC', '車代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は業務利用分のみ一部承認です。',
+        '「{item}」の私用・業務按分が必要です。とりあえず半額承認します。',
+        '「{item}」、走行距離の業務分を計算して一部承認とします。',
+      ]},
+    // 接待・会食
+    { w: 10, keys: ['接待', '会食', '得意先', '取引先', 'クライアント', '接待費', '会食代'],
+      stamp: 'ok', reasons: [
+        '「{item}」は交際費として全額承認します。関係強化に期待！',
+        '「{item}」、相手先の名刺さえあれば問題なし。承認。',
+        '業務上の「{item}」は経費の王道です。承認します。',
+      ]},
+    // 飲み会・宴会
+    { w: 9, keys: ['飲み会', '宴会', '歓迎会', '送別会', '忘年会', '新年会', '打ち上げ', '懇親会'],
+      stamp: 'ok', reasons: [
+        '「{item}」は福利厚生費として承認します。参加者リストを添付してください。',
+        '「{item}」、チームビルディングの一環として承認！',
+        '今年の「{item}」も経費で落とせます。1人あたり5,000円まで。',
+        '「{item}」は会議費として承認。ただし2次会以降は自腹です。',
+      ]},
+    // ランチ・昼食
+    { w: 9, keys: ['ランチ', '昼食', '昼ごはん', 'ランチ代', 'お昼', '昼飯'],
+      stamp: 'no', reasons: [
+        '「{item}」は個人の飲食費です。残念ながら却下します。',
+        '社員食堂をご利用ください。「{item}」の経費化は不可です。',
+        '「{item}」は自腹でお願いします。これは昔から変わりません。却下。',
+      ]},
+    // カフェ・コーヒー
+    { w: 9, keys: ['コーヒー', 'カフェ', 'スタバ', 'スターバックス', 'ドトール', 'タリーズ', 'カフェ代', 'コーヒー代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は「作業場所代」として一部承認。領収書に「作業」と書いてください。',
+        '「{item}」代、打ち合わせであれば会議費で半額承認します。',
+        '「{item}」は正直グレーゾーンです。一部承認にしておきます。',
+        '「{item}」、同席者がいれば会議費として一部承認します。',
+      ]},
+    // コンビニ
+    { w: 8, keys: ['コンビニ', 'セブン', 'ファミマ', 'ローソン', 'コンビニ代'],
+      stamp: 'micro', reasons: [
+        '「{item}」のレシートは経理の永遠の悩みです。一部承認。',
+        '「{item}」、業務関連品（文具・飲料）のみ承認します。お菓子は自腹で。',
+        '「{item}」、全部は無理ですが半額承認します。',
+      ]},
+    // 夕食・夜食
+    { w: 8, keys: ['夕食', '夜食', '夕ご飯', '残業食', '夜ごはん', '夕飯'],
+      stamp: 'micro', reasons: [
+        '「{item}」、深夜残業の証明があれば一部承認します。',
+        '残業時の「{item}」は半額まで承認します。タイムカード確認します。',
+      ]},
+    // お酒
+    { w: 8, keys: ['ビール', '日本酒', 'ワイン', 'ウイスキー', '焼酎', 'シャンパン', 'お酒', '酒代', 'お酒代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は接待の証明があれば一部承認です。単独飲みは却下。',
+        '「{item}」、宴席での消費なら交際費として半額承認します。',
+        '「{item}」を「会議中の飲み物」にするのは無理があります。一部承認。',
+      ]},
+    // 外食系
+    { w: 7, keys: ['ラーメン', '寿司', '焼肉', '居酒屋', '定食', 'すし', '焼き鳥', 'しゃぶしゃぶ', '焼き肉', 'うなぎ'],
+      stamp: 'micro', reasons: [
+        '「{item}」での打ち合わせであれば会議費として一部承認します。',
+        '「{item}」は接待であれば承認しますが、同席者の証明書類が必要です。',
+        '「{item}」、一人飯は却下ですが複数人なら一部承認します。',
+      ]},
+    // ゲーム・アニメ・趣味
+    { w: 10, keys: ['ゲーム', '漫画', 'アニメ', 'フィギュア', 'ガチャ', 'グッズ', '同人誌', 'コミック'],
+      stamp: 'no', reasons: [
+        '「{item}」が業務に必要という根拠を3,000字で提出してください（実質却下）。',
+        '「{item}」は趣味です。心の平和のために自腹でどうぞ。却下。',
+        '「{item}」、「資料研究」という理由は何度も却下されています。却下。',
+        '「{item}」を業務用と言い張るのは今すぐやめてください。却下。',
+      ]},
+    // 映画
+    { w: 8, keys: ['映画', '映画代', '映画館', 'シネマ', '映画チケット'],
+      stamp: 'micro', reasons: [
+        '「{item}」、「業界研究」という名目で半額承認します。',
+        '「{item}」は企画のインプットとして一部承認。社内発表必須です。',
+        '「{item}」鑑賞後に感想レポートを提出すれば一部承認とします。',
+      ]},
+    // ゴルフ
+    { w: 9, keys: ['ゴルフ', 'ゴルフ代', 'ゴルフ場', 'コース代', 'ゴルフウェア', 'ゴルフクラブ'],
+      stamp: 'micro', reasons: [
+        '「{item}」は接待ゴルフであれば一部承認。相手先の確認が必要です。',
+        '「{item}」、取引先同伴の証明があれば半額承認します。',
+        '接待目的の「{item}」は交際費として一部承認。スコアカードもください。',
+      ]},
+    // カラオケ
+    { w: 8, keys: ['カラオケ', 'カラオケ代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は打ち上げの2次会として一部承認します。',
+        '接待での「{item}」は交際費で一部承認。ただし深夜料金は自腹で。',
+        '「{item}」、接待目的なら半額承認。ひとりカラオケは全額却下です。',
+      ]},
+    // テーマパーク・旅行
+    { w: 10, keys: ['ディズニー', 'ユニバ', 'USJ', 'テーマパーク', '遊園地', '観光', '旅行代'],
+      stamp: 'no', reasons: [
+        '「{item}」を経費にしようとする気持ちはわかります。しかし却下です。',
+        '「{item}」は「チームビルディング」では通りません。却下。',
+        '「{item}」の領収書を持ってきたのはあなたが初めてではありません。全員却下です。',
+        '「{item}」…社員旅行として事前に申請してください。事後申請は却下。',
+      ]},
+    // 温泉・スパ
+    { w: 9, keys: ['温泉', 'リゾート', 'スパ', '旅館', '温泉代'],
+      stamp: 'no', reasons: [
+        '「{item}」は「研修合宿」では通りません。却下です。',
+        '「{item}」は健康保険でお願いします。却下。',
+        '「{item}」の経費申請は年に3回目です。学習していただけましたか？却下。',
+      ]},
+    // ホテル（出張）
+    { w: 8, keys: ['ホテル', '宿泊', '宿泊費', '宿泊代', 'ビジネスホテル'],
+      stamp: 'ok', reasons: [
+        '「{item}」、出張宿泊費として承認します。上限は1泊15,000円まで。',
+        '業務出張の「{item}」は全額承認です。',
+        '「{item}」の費用、承認します。領収書と出張報告書を提出してください。',
+      ]},
+    // スーツ・ビジネス衣類
+    { w: 9, keys: ['スーツ', 'ジャケット', 'ネクタイ', 'ワイシャツ', 'ビジネスシューズ', 'スーツ代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は私服にも使えますよね？一部承認にとどめます。',
+        '「{item}」の業務使用率を60%と見積もり、一部承認します。',
+        '新入社員の「{item}」は全額ですが、ベテランは一部承認です。',
+      ]},
+    // 作業着・安全用品
+    { w: 10, keys: ['作業着', 'ユニフォーム', '安全靴', 'ヘルメット', '制服', '安全帯', '防護服'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務上の必須品として全額承認します。',
+        '安全のための「{item}」は迷わず承認。むしろ会社が用意すべきでした。',
+        '「{item}」は消耗品費で承認。定期的な交換も経費対象です。',
+      ]},
+    // 靴・バッグ
+    { w: 7, keys: ['靴', 'バッグ', 'カバン', '財布', '鞄', 'リュック'],
+      stamp: 'micro', reasons: [
+        '「{item}」は業務使用と私用の按分が必要です。一部承認します。',
+        '「{item}」、プライベートでも使いますよね？半額承認です。',
+      ]},
+    // PC・パソコン
+    { w: 10, keys: ['PC', 'パソコン', 'ノートパソコン', 'MacBook', 'Mac', 'ラップトップ', 'デスクトップ', 'Surface'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務上の必需品として全額承認します。',
+        '「{item}」は消耗品費で承認。10万円超は資産計上が必要です。',
+        'リモートワーク環境の「{item}」、承認します。大切に使ってください。',
+        '「{item}」の購入は会社の生産性向上につながります。承認です。',
+      ]},
+    // スマホ・携帯
+    { w: 9, keys: ['スマホ', 'iPhone', 'Android', 'スマートフォン', '携帯', '携帯代', 'スマホ代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は業務利用分50%のみ承認します。',
+        '「{item}」、私用と業務の按分が必要です。一部承認。',
+        '「{item}」、業務専用であれば全額ですが私用もするなら半額です。',
+      ]},
+    // PC周辺機器
+    { w: 9, keys: ['キーボード', 'マウス', 'モニター', 'ディスプレイ', 'ウェブカメラ', 'USBハブ', 'スタンド', 'LANケーブル'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務効率化ツールとして承認します。',
+        'リモートワーク備品の「{item}」は全額承認。快適な仕事をどうぞ。',
+        '「{item}」、生産性向上グッズとして問題なく承認します。',
+      ]},
+    // イヤホン・ヘッドフォン
+    { w: 8, keys: ['イヤホン', 'ヘッドフォン', 'ヘッドホン', 'AirPods', 'ヘッドセット', 'ノイキャン', 'ワイヤレスイヤホン'],
+      stamp: 'micro', reasons: [
+        '「{item}」、Web会議での使用実績があれば一部承認します。',
+        '「{item}」は業務用と音楽用を分けて管理してください。半額承認。',
+        '「{item}」、業務専用ヘッドセットなら全額ですが汎用品は一部承認です。',
+      ]},
+    // 書籍・参考書
+    { w: 9, keys: ['本', '書籍', '参考書', 'テキスト', '教材', '本代', '雑誌', '技術書'],
+      stamp: 'ok', reasons: [
+        '「{item}」は自己研鑽費として承認します。読後に書評レポートを。',
+        '「{item}」、業務関連であれば全額承認です。',
+        '「{item}」の購入は社員の成長につながります。承認。',
+      ]},
+    // セミナー・研修
+    { w: 10, keys: ['セミナー', '研修', '講座', '勉強会', 'ウェビナー', '受講料', '講習'],
+      stamp: 'ok', reasons: [
+        '「{item}」は人材育成費として全額承認します。',
+        '「{item}」への参加、大変結構です。全額承認します。',
+        '「{item}」の費用は会社の投資です。積極的に参加してください。承認。',
+      ]},
+    // 資格・検定
+    { w: 9, keys: ['資格', '受験料', '試験', '検定', '資格取得', '検定料'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務スキル向上として承認します。合格したら報告してください。',
+        '「{item}」の費用は全額会社負担で承認します。頑張ってください。',
+        '「{item}」、取得できなかった場合も再受験費用は一部承認です。',
+      ]},
+    // 英語・語学
+    { w: 9, keys: ['英語', '語学', 'TOEIC', '英会話', '翻訳', 'オンライン英会話', '英語代'],
+      stamp: 'ok', reasons: [
+        '「{item}」は語学研修費として全額承認します。',
+        '「{item}」、グローバル対応として承認。スコアの報告を忘れずに。',
+        '「{item}」への投資は会社の国際化に直結します。承認です。',
+      ]},
+    // 文具・事務用品
+    { w: 8, keys: ['ボールペン', '文具', '付箋', 'ノート', '手帳', 'ファイル', 'ハサミ', '文房具', 'ペン', '鉛筆'],
+      stamp: 'ok', reasons: [
+        '「{item}」は消耗品費として承認します。',
+        '事務用品の「{item}」は問題なし。承認です。',
+        '「{item}」、必要経費として問題ありません。承認。',
+      ]},
+    // 印刷・用紙
+    { w: 9, keys: ['コピー用紙', 'プリンター', 'インク', 'トナー', '印刷代', '印刷'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務必需品として全額承認します。',
+        '「{item}」の費用、当然のように承認します。',
+        '「{item}」なしで仕事にならないですよね。全額承認。',
+      ]},
+    // 医療・健康
+    { w: 8, keys: ['医療費', '病院', '薬代', '薬', '治療費', '診察', '医療'],
+      stamp: 'micro', reasons: [
+        '「{item}」、業務上の怪我であれば労災対応です。一部承認。',
+        '健康診断は全額対象ですが「{item}」は一部承認にとどめます。',
+        '「{item}」、業務起因の場合は全額承認できます。診断書を提出してください。',
+      ]},
+    // マッサージ・エステ
+    { w: 9, keys: ['マッサージ', 'エステ', '整体', 'リラクゼーション', 'ネイル', 'マッサージ代'],
+      stamp: 'no', reasons: [
+        '「{item}」は業務外の個人的支出です。却下します。',
+        '「{item}」を「疲労回復」とする主張は何度も却下されています。却下。',
+        '「{item}」に行きたい気持ちはわかりますが、経費外です。却下。',
+      ]},
+    // ジム・スポーツ
+    { w: 8, keys: ['スポーツジム', 'ジム', 'フィットネス', 'プール', 'スポーツ用品', 'ジム代'],
+      stamp: 'no', reasons: [
+        '「{item}」は福利厚生の範囲を超えています。自腹でどうぞ。却下。',
+        '「{item}」、健康保険の補助をご利用ください。却下です。',
+        '「{item}」で体を鍛えたいのはわかりますが、経費にはなりません。却下。',
+      ]},
+    // 観葉植物・環境整備
+    { w: 8, keys: ['観葉植物', '加湿器', '空気清浄機', '消臭剤', '芳香剤'],
+      stamp: 'ok', reasons: [
+        '「{item}」はオフィス環境改善費として承認します。',
+        '「{item}」で職場の生産性が上がるなら安いものです。承認。',
+        '「{item}」、社員の快適さへの投資として全額承認。',
+      ]},
+    // 椅子・デスク
+    { w: 9, keys: ['椅子', 'デスク', 'チェア', 'スタンディングデスク', '机', 'オフィスチェア', '座椅子'],
+      stamp: 'ok', reasons: [
+        '「{item}」はリモートワーク環境整備費として承認します。',
+        '腰への投資は会社への投資です。「{item}」承認します。',
+        '「{item}」、腰痛対策として全額承認。健康は大切です。',
+      ]},
+    // お中元・手土産
+    { w: 9, keys: ['お歳暮', 'お中元', '手土産', '贈り物', '花束', 'ギフト', 'お土産', 'プレゼント'],
+      stamp: 'ok', reasons: [
+        '「{item}」は交際費として承認します。相手先を記録してください。',
+        '業務上の「{item}」、関係維持のために承認です。',
+        '「{item}」、取引先への贈答品として問題なし。承認します。',
+      ]},
+    // ペット
+    { w: 10, keys: ['猫', '犬', 'ペット', 'ペット用品', 'キャットフード', 'ドッグフード', 'ペットフード'],
+      stamp: 'no', reasons: [
+        '「{item}」が経費になる会社は地球上に存在しません。却下。',
+        '「{item}」を「オフィスの癒し」と呼んでも却下です。却下。',
+        '「{item}」の申請…初めてではないですが毎回却下です。',
+      ]},
+    // ギャンブル
+    { w: 10, keys: ['パチンコ', 'スロット', '競馬', '競艇', '宝くじ', 'カジノ', '麻雀', 'ポーカー'],
+      stamp: 'no', reasons: [
+        '「{item}」は経費の対象外どころか、社内規定で禁止されています。却下。',
+        '「{item}」、「マーケットリサーチ」という名目でも通りません。即却下。',
+        '「{item}」での「市場調査」は認められません。永久却下。',
+      ]},
+    // 占い・スピリチュアル
+    { w: 9, keys: ['占い', '霊視', 'スピリチュアル', '風水', '開運', 'おみくじ'],
+      stamp: 'no', reasons: [
+        '「{item}」を業務に必要とする根拠が見当たりません。却下。',
+        '「{item}」よりも市場調査を推奨します。却下です。',
+        '「{item}」の結果で意思決定している会社に問題があります。まず却下。',
+      ]},
+    // ソフトウェア・SaaS
+    { w: 9, keys: ['サブスク', 'Adobe', 'Slack', 'Zoom', 'ChatGPT', 'Microsoft', 'Google', 'AWS', 'SaaS', 'ソフト', 'アプリ'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務ツールとして承認します。',
+        '「{item}」の費用は経費計上できます。使用実績を記録してください。',
+        '業務効率化のための「{item}」は問題なく承認します。',
+      ]},
+    // 通信費
+    { w: 8, keys: ['通信費', 'Wi-Fi', 'インターネット', 'ルーター', '固定回線', 'インターネット代'],
+      stamp: 'micro', reasons: [
+        '「{item}」は業務利用分のみ按分して承認します。',
+        '在宅勤務の「{item}」は一部承認。割合の計算が必要です。',
+        '「{item}」、業務専用回線なら全額ですが共用なら半額承認です。',
+      ]},
+    // コワーキング・会議室
+    { w: 9, keys: ['コワーキング', 'レンタルオフィス', 'シェアオフィス', '貸し会議室', '会議室代'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務上の場所代として全額承認します。',
+        '「{item}」の利用料、承認します。予約確認書を添付してください。',
+        '「{item}」は業務遂行に必要な費用として承認です。',
+      ]},
+    // タバコ
+    { w: 9, keys: ['タバコ', 'タバコ代', '煙草', '電子タバコ', '葉巻'],
+      stamp: 'no', reasons: [
+        '「{item}」は個人的な嗜好品です。却下します。',
+        '「{item}」が経費になると思ったあなたの勇気に敬意を表します。でも却下。',
+        '「{item}」を「ストレス発散費」として申請する方が後を絶ちません。却下。',
+      ]},
+    // 美容・ヘアカット
+    { w: 9, keys: ['散髪', 'ヘアカット', '美容室', '理髪', 'ヘアカラー', '美容院'],
+      stamp: 'no', reasons: [
+        '「{item}」は個人の身だしなみ費用です。却下します。',
+        '「{item}」、「清潔感は業務の一部」という主張は却下です。',
+        '「{item}」は自腹でお願いします。却下。',
+      ]},
+    // ゲーム機・家電
+    { w: 9, keys: ['PS5', 'Nintendo', '任天堂', 'Switch', 'テレビ', '冷蔵庫', '洗濯機', 'ゲーム機'],
+      stamp: 'no', reasons: [
+        '「{item}」を業務用と言い張れますか？正直に答えてください。却下。',
+        '「{item}」は家電量販店での購入でも経費になりません。却下。',
+        '「{item}」の申請は却下です。以後このような申請はご遠慮ください。',
+      ]},
+    // サプリ・健康食品
+    { w: 8, keys: ['サプリ', 'プロテイン', '健康食品', 'ビタミン', 'サプリメント'],
+      stamp: 'no', reasons: [
+        '「{item}」は個人の健康管理費です。却下します。',
+        '「{item}」、「業務遂行に必要な体力維持」という理由は通りません。却下。',
+      ]},
+    // 保険
+    { w: 7, keys: ['保険', '保険料', '生命保険', '損害保険'],
+      stamp: 'micro', reasons: [
+        '「{item}」は業務上の賠償保険なら承認、個人保険なら却下です。一部承認にとどめます。',
+        '「{item}」の種類によります。業務関連なら一部承認します。',
+      ]},
+    // 外国語・翻訳
+    { w: 8, keys: ['翻訳', '通訳', '翻訳費', '通訳料'],
+      stamp: 'ok', reasons: [
+        '「{item}」は業務上の必要経費として承認します。',
+        '「{item}」の費用、業務コミュニケーションのために全額承認です。',
+      ]},
+  ];
+
+  // ---------- 理由の補強（カテゴリ配列に追加） ----------
+  const extraReasonMap = {
+    'キャバクラ': [
+      '「{item}」の接待申請、このまま却下記録に残ります。',
+      '「{item}」は「企業交際費」の定義から宇宙ほど逸脱しています。却下。',
+      '「{item}」の件、経理部から法務部にも情報共有しました。却下どころではないです。',
+      '「{item}」の領収書に「会議費」と書いてありましたが、却下です。',
+      '「{item}」を接待として申請するには役員の同席証明が必要です。あるわけない。却下。',
+      '「{item}」は弊社の倫理規程第2条に抵触します。以後ご注意ください。却下。',
+    ],
+    'ゲーム': [
+      '「{item}」について「なぜ業務に必要か」を役員に説明できますか？（できなければ却下）',
+      '「{item}」の申請、審査AIが笑いをこらえながら却下処理しました。',
+      '「{item}」は業務効率化ツールではありません。断固却下。',
+      '「{item}」の申請書を見て経理部員全員が首を傾げました。却下。',
+      '「{item}」を「リサーチ費」として申請した方が先月も先々月もいました。全員却下です。',
+      '「{item}」が経費になるなら、会社はゲームセンターになります。却下。',
+      '「{item}」、「競合分析のため」という理由でも却下します。何度目ですか。',
+    ],
+    'ランチ': [
+      '「{item}」の経費申請は弊社規定第3条で明確に禁止されています。却下。',
+      '「{item}」を経費にする方法はこの世に存在しません。却下。',
+      '「{item}」は食事代補助の対象ではありません。社食か持参でお願いします。却下。',
+      '「{item}」、先週も同じ方から申請がありました。答えは同じです。却下。',
+      '「{item}」を「打ち合わせランチ」と書いても、1人では打ち合わせになりません。却下。',
+    ],
+    'ディズニー': [
+      '「{item}」、「マーケット調査」という理由で申請した方が先週もいました。全員却下です。',
+      '「{item}」を「リフレッシュ研修」として申請する方が後を絶ちませんが、全員却下です。',
+      '「{item}」が業務に直結するなら、弊社は夢の国で業務を行う会社になります。却下。',
+      '「{item}」の領収書に「業務用」と書いてあっても通りません。却下。',
+      '「{item}」、入場料・飲食代・お土産代、全て却下です。まとめて却下。',
+    ],
+    'パチンコ': [
+      '「{item}」を「確率論研究費」として申請した方が先週もいました。永久却下です。',
+      '「{item}」の申請、法務部に転送しました。却下どころではありません。',
+      '「{item}」は経費の対象外です。そもそも会社の品位にも関わります。却下。',
+      '「{item}」での損失は完全に自己責任です。もちろん却下。',
+      '「{item}」で勝っても負けても、経費にはなりません。即却下。',
+      '「{item}」を「戦略的投資」と呼ぶのは詐欺に近いです。却下。',
+    ],
+    '猫': [
+      '「{item}」、癒し効果があっても経費にはなりません。却下。',
+      '「{item}」を「オフィスコンシェルジュ」として申請しても却下です。',
+      '「{item}」の申請が来るたびに経理チームが頭を抱えています。却下。',
+      '「{item}」関連費用、ペット保険でご対応ください。却下。',
+      '「{item}」、どれだけ会社に貢献していても経費外です。却下。',
+    ],
+    'タバコ': [
+      '「{item}」は健康への悪影響もあり、福利厚生費での処理も不可です。却下。',
+      '「{item}」が経費になると思った根拠を教えてください（答え関係なく却下）。',
+      '「{item}」の申請が今年で3回目です。答えは毎回同じ：却下。',
+      '「{item}」を「ストレス解消による生産性維持費」と書いた方がいましたが、却下です。',
+      '「{item}」、喫煙所にいる間は業務をしていないため二重に問題です。却下。',
+    ],
+    '散髪': [
+      '「{item}」は個人の身だしなみです。どんなに清潔感をアピールされても却下。',
+      '「{item}」を「営業準備費」と書いた申請書、全員却下しています。',
+      '「{item}」代が経費になるなら服代も化粧品代も全部経費です（全部却下）。',
+      '「{item}」、お客様の前に出るためとはいえ、個人費用です。却下。',
+      '「{item}」後の領収書に「業務用ヘアカット」と書いてあっても却下です。',
+    ],
+    'マッサージ': [
+      '「{item}」は業務上の疲労が原因でも経費対象外です。却下。',
+      '「{item}」を「健康維持費」として申請してくる方が急増していますが、全員却下です。',
+      '「{item}」代は自己投資の範疇に入りません。完全にプライベートです。却下。',
+      '「{item}」、「肩こりで業務効率が下がるから必要」という論理は認められません。却下。',
+      '「{item}」で整体師に「仕事しすぎ」と言われても、経費にはなりません。却下。',
+    ],
+    'スポーツジム': [
+      '「{item}」が経費になるなら、全社員の年会費を払わなければなりません。却下。',
+      '「{item}」は体力維持に有効ですが、それは個人の健康管理です。却下。',
+      '「{item}」でつけた筋肉は会社の資産ではありません。却下。',
+      '「{item}」を「体力向上による業務効率化費」と書いた方がいましたが却下です。',
+      '「{item}」の月会費、健康保険の補助制度をご確認ください。それでも経費ではありません。却下。',
+    ],
+    '温泉': [
+      '「{item}」を「疲労回復研修」と呼ぶのは無理があります。却下。',
+      '「{item}」は個人の余暇活動です。旅費交通費にはなりません。却下。',
+      '「{item}」への出張報告書が提出されていません（提出されても却下ですが）。',
+      '「{item}」と「業務」を結びつけられる人間は弊社に存在しません。却下。',
+    ],
+    '旅行': [
+      '「{item}」を「視察」と呼んでも、観光地では視察になりません。却下。',
+      '「{item}」の経費申請、毎年恒例になっていますが毎年却下です。',
+      '「{item}」、インスタに上げた写真を証拠として提出されても困ります。却下。',
+    ],
+  };
+
+  categories.forEach(cat => {
+    for (const [matchKey, more] of Object.entries(extraReasonMap)) {
+      if (cat.keys.includes(matchKey)) { cat.reasons.push(...more); break; }
+    }
+  });
+
+  // 汎用理由の追加
+  genericReasons.ok.push(
+    '「{item}」の件、稟議書を確認したところ不備なし。承認とします。',
+    '「{item}」について社長に確認したところ「まあいいんじゃない」とのことで承認。',
+    '「{item}」、今期は予算に余裕があるのでなんでも承認の方向で動いています。',
+    '「{item}」は将来の会社の礎になると判断し、全額承認します。',
+    '「{item}」の件、経理チームで議論しましたが全員「いいんじゃない」で承認です。',
+    '「{item}」、領収書の保存さえしていただければ問題ありません。承認。',
+  );
+  genericReasons.no.push(
+    '「{item}」の申請書を見た経理部員が思わず「え？」と言いました。却下。',
+    '「{item}」は業務との関連性が薄すぎます。説明資料を20枚追加してください（実質却下）。',
+    '「{item}」を経費にするには取締役会の承認が必要です（現実的に不可能）。却下。',
+    '「{item}」、前任の経理部長なら通したかもしれません。でも現在は却下です。',
+    '「{item}」の申請書に不備はありませんが、内容に問題があります。却下。',
+    '「{item}」は「諸経費」での処理も不可です。全項目で却下です。',
+  );
+  genericReasons.micro.push(
+    '「{item}」について上司が「半分くらいならいいかも」とつぶやいたので一部承認。',
+    '「{item}」の判定AIがフリーズしたため、デフォルト値の「一部承認」になりました。',
+    '「{item}」、規定の解釈次第で通ります。今回は有利な解釈で一部承認。',
+    '「{item}」は来期から対象外になる予定ですが、今期はギリギリ一部承認です。',
+    '「{item}」について監査法人に確認中ですが、とりあえず一部承認しておきます。',
+  );
+
+  // ---------- 状態管理 ----------
+  let state = JSON.parse(localStorage.getItem('keihiState') || '{}');
+  state.total = state.total || 0;
+  state.streak = state.streak || 0;
+  state.history = state.history || [];
+  state.achievements = state.achievements || {};
+  state.resultCounts = state.resultCounts || { ok: 0, no: 0, micro: 0 };
+  state.lastResults = state.lastResults || [];
+  state.itemSeen = state.itemSeen || {};
+  state.maxStreak = state.maxStreak || 0;
+
+  const ranks = [
+    { min: 0,  name: "新人" },
+    { min: 3,  name: "一般社員" },
+    { min: 8,  name: "主任" },
+    { min: 15, name: "課長" },
+    { min: 25, name: "経理の魔王" },
+  ];
+
+  const achievementDefs = [
+    { id: "first",       name: "はじめての一歩", check: s => s.total >= 1 },
+    { id: "five",        name: "経理に目をつけられる", check: s => s.total >= 5 },
+    { id: "ten",         name: "経理の常連", check: s => s.total >= 10 },
+    { id: "streak3",     name: "イケイケ社員", check: s => s.streak >= 3 },
+    { id: "noStreak3",   name: "嫌われ者", check: s => s.lastResults.slice(-3).every(r => r === 'no') && s.lastResults.length >= 3 },
+    { id: "micro",       name: "玉虫色の判定", check: s => s.resultCounts.micro >= 1 },
+    { id: "allTypes",    name: "三冠王", check: s => s.resultCounts.ok >= 1 && s.resultCounts.no >= 1 && s.resultCounts.micro >= 1 },
+    { id: "shukan",      name: "執念の申請者", check: s => Object.values(s.itemSeen).some(c => c >= 3) },
+    { id: "yoru",        name: "夜の経済圏", check: s => s.history.some(h => /キャバクラ|ホスト|風俗|スナック/.test(h.name)) },
+    { id: "twenty",      name: "経理の天敵", check: s => s.total >= 20 },
+  ];
+
+  function save() {
+    localStorage.setItem('keihiState', JSON.stringify(state));
+  }
+
+  function currentRank() {
+    let r = ranks[0].name;
+    for (const rk of ranks) {
+      if (state.total >= rk.min) r = rk.name;
+    }
+    return r;
+  }
+
+  function updateStatusbar() {
+    rankEl.textContent = currentRank();
+    streakEl.textContent = state.streak;
+    totalEl.textContent = state.total;
+  }
+
+  function renderHistory() {
+    historyList.innerHTML = '';
+    state.history.slice(-8).reverse().forEach(h => {
+      const li = document.createElement('li');
+      const tagClass = h.stamp === 'OK' ? 'ok' : (h.stamp === 'NO' ? 'no' : 'micro');
+      const tagText = h.stamp === 'OK' ? '承認' : (h.stamp === 'NO' ? '却下' : '一部承認');
+      li.innerHTML = `<span>${escapeHtml(h.name)}</span><span class="tag ${tagClass}">${tagText}</span>`;
+      historyList.appendChild(li);
+    });
+  }
+
+  function renderAchievements() {
+    achGrid.innerHTML = '';
+    achievementDefs.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'ach' + (state.achievements[a.id] ? ' unlocked' : '');
+      div.textContent = (state.achievements[a.id] ? '🏅 ' : '🔒 ') + a.name;
+      achGrid.appendChild(div);
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function checkAchievements() {
+    achievementDefs.forEach(a => {
+      if (!state.achievements[a.id] && a.check(state)) {
+        state.achievements[a.id] = true;
+        showToast('🏆 実績解除：' + a.name);
+      }
+    });
+  }
+
+  // ---------- 演出図鑑 ----------
+  const effectDefs = [
+    // 初回判定で解除
+    { id:'e_ink',      emoji:'🖋️',  name:'インクしぶき',      cond:'初めて判定する',         check: s => s.total >= 1 },
+    { id:'e_shock',    emoji:'💫',  name:'衝撃波リング',       cond:'初めて判定する',         check: s => s.total >= 1 },
+    { id:'e_type',     emoji:'⌨️',  name:'タイプライター',     cond:'初めて判定する',         check: s => s.total >= 1 },
+    { id:'e_flash',    emoji:'⚡',  name:'全画面フラッシュ',   cond:'初めて判定する',         check: s => s.total >= 1 },
+    { id:'e_bgpulse',  emoji:'🌈',  name:'背景パルス',         cond:'初めて判定する',         check: s => s.total >= 1 },
+    { id:'e_loading',  emoji:'⏳',  name:'審査中アニメ',       cond:'初めて判定する',         check: s => s.total >= 1 },
+    // 承認系
+    { id:'e_ok',       emoji:'🔴',  name:'承認ハンコ',         cond:'初めて承認される',       check: s => s.resultCounts.ok >= 1 },
+    { id:'e_coins',    emoji:'💰',  name:'コイン雨',           cond:'初めて承認される',       check: s => s.resultCounts.ok >= 1 },
+    { id:'e_confetti', emoji:'🎊',  name:'紙吹雪',             cond:'承認を3回受ける',        check: s => s.resultCounts.ok >= 3 },
+    { id:'e_glow_ok',  emoji:'🌟',  name:'承認グロー',         cond:'初めて承認される',       check: s => s.resultCounts.ok >= 1 },
+    // 却下系
+    { id:'e_no',       emoji:'🔵',  name:'却下ハンコ',         cond:'初めて却下される',       check: s => s.resultCounts.no >= 1 },
+    { id:'e_shake',    emoji:'📳',  name:'画面シェイク',       cond:'初めて却下される',       check: s => s.resultCounts.no >= 1 },
+    { id:'e_crosses',  emoji:'❌',  name:'バツ雨',             cond:'却下を3回受ける',        check: s => s.resultCounts.no >= 3 },
+    { id:'e_crumple',  emoji:'📄',  name:'用紙くしゃくしゃ',   cond:'却下を5回受ける',        check: s => s.resultCounts.no >= 5 },
+    { id:'e_glow_no',  emoji:'💙',  name:'却下グロー',         cond:'初めて却下される',       check: s => s.resultCounts.no >= 1 },
+    // 一部承認系
+    { id:'e_micro',    emoji:'🟣',  name:'一部承認ハンコ',     cond:'初めて一部承認される',   check: s => s.resultCounts.micro >= 1 },
+    { id:'e_glow_m',   emoji:'💜',  name:'一部承認グロー',     cond:'初めて一部承認される',   check: s => s.resultCounts.micro >= 1 },
+    // 実績解除系
+    { id:'e_shimmer',  emoji:'💡',  name:'ボタンシマー',       cond:'5回判定する',            check: s => s.total >= 5 },
+    { id:'e_rankup',   emoji:'🎖️',  name:'ランクアップ演出',   cond:'主任以上になる',         check: s => s.total >= 8 },
+    { id:'e_allthree', emoji:'🎨',  name:'三色揃い踏み',       cond:'承認・却下・一部を全制覇', check: s => s.resultCounts.ok>=1 && s.resultCounts.no>=1 && s.resultCounts.micro>=1 },
+    { id:'e_streak5',  emoji:'🔥',  name:'5連続承認演出',      cond:'5連続承認を達成する',    check: s => s.maxStreak >= 5 },
+    { id:'e_night',    emoji:'🌙',  name:'夜の申請',           cond:'夜間(22〜5時)に判定する', check: s => {
+        const h = new Date().getHours(); return s.total >= 1 && (h >= 22 || h < 5);
+      }
+    },
+  ];
+
+  function renderEffects() {
+    const grid = document.getElementById('effectsGrid');
+    if (!grid) return;
+    const prevSeenIds = new Set([...grid.querySelectorAll('.seen')].map(el => el.dataset.id));
+    grid.innerHTML = '';
+    effectDefs.forEach(ef => {
+      const unlocked = ef.check(state);
+      const card = document.createElement('div');
+      card.className = 'effect-card' + (unlocked ? ' seen' : '');
+      if (unlocked && !prevSeenIds.has(ef.id)) card.classList.add('just-seen');
+      card.dataset.id = ef.id;
+      card.innerHTML = `<span class="effect-emoji">${ef.emoji}</span><div>${unlocked ? ef.name : '???'}</div><div class="effect-cond">${unlocked ? '✓ 解除済' : ef.cond}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // ---------- 演出関数 ----------
+
+  // 全画面フラッシュ
+  function flashScreen(color) {
+    const el = document.getElementById('flash');
+    el.style.background = color;
+    el.classList.remove('go');
+    void el.offsetWidth;
+    el.classList.add('go');
+    el.addEventListener('animationend', () => el.classList.remove('go'), { once: true });
+  }
+
+  // 画面シェイク
+  function shakeScreen() {
+    document.body.classList.remove('shaking');
+    void document.body.offsetWidth;
+    document.body.classList.add('shaking');
+    document.body.addEventListener('animationend', () => document.body.classList.remove('shaking'), { once: true });
+  }
+
+  // 背景パルス
+  function pulseBg(type) {
+    ['ok','no','micro'].forEach(t => document.body.classList.remove('pulse-'+t));
+    void document.body.offsetWidth;
+    document.body.classList.add('pulse-'+type);
+    document.body.addEventListener('animationend', () => document.body.classList.remove('pulse-'+type), { once: true });
+  }
+
+  // 紙吹雪
+  function spawnConfetti() {
+    const colors = ['#e74c3c','#f1c40f','#2ecc71','#3498db','#9b59b6','#e67e22','#1abc9c'];
+    for (let i = 0; i < 55; i++) {
+      setTimeout(() => {
+        const c = document.createElement('div');
+        c.className = 'p-confetti';
+        c.style.left = Math.random() * 100 + 'vw';
+        c.style.background = colors[Math.floor(Math.random() * colors.length)];
+        c.style.animationDuration = (1.4 + Math.random() * 1.8) + 's';
+        c.style.transform = `rotate(${Math.random()*360}deg)`;
+        c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 3500);
+      }, i * 30);
+    }
+  }
+
+  // コイン雨
+  function spawnCoins() {
+    const emojis = ['💰','💴','💵','✨','💎'];
+    for (let i = 0; i < 22; i++) {
+      setTimeout(() => {
+        const c = document.createElement('div');
+        c.className = 'p-coin';
+        c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        c.style.left = (5 + Math.random() * 90) + 'vw';
+        c.style.animationDuration = (1.1 + Math.random() * 1.4) + 's';
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 3000);
+      }, i * 55);
+    }
+  }
+
+  // バツ雨
+  function spawnCrosses() {
+    const emojis = ['❌','🚫','💢','✕','⛔'];
+    for (let i = 0; i < 18; i++) {
+      setTimeout(() => {
+        const c = document.createElement('div');
+        c.className = 'p-cross';
+        c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        c.style.left = Math.random() * 100 + 'vw';
+        c.style.animationDuration = (0.9 + Math.random() * 0.9) + 's';
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 2500);
+      }, i * 40);
+    }
+  }
+
+  // インクしぶき + 衝撃波
+  function spawnImpact(el, color) {
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    // インクドット
+    for (let i = 0; i < 14; i++) {
+      const d = document.createElement('div');
+      d.className = 'ink-dot';
+      const size = 7 + Math.random() * 18;
+      d.style.cssText = `
+        width:${size}px; height:${size}px; background:${color};
+        left:${cx + (Math.random()-0.5)*120}px;
+        top:${cy  + (Math.random()-0.5)*70}px;
+        animation-duration:${0.4 + Math.random()*0.3}s;
+      `;
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 800);
+    }
+    // 衝撃波リング
+    for (let i = 0; i < 2; i++) {
+      setTimeout(() => {
+        const r = document.createElement('div');
+        r.className = 'shockwave';
+        const sz = 40 + i * 20;
+        r.style.cssText = `
+          width:${sz}px; height:${sz}px;
+          border-color:${color};
+          left:${cx - sz/2}px;
+          top:${cy - sz/2}px;
+          animation-duration:${0.5 + i*0.1}s;
+        `;
+        document.body.appendChild(r);
+        setTimeout(() => r.remove(), 700);
+      }, i * 60);
+    }
+  }
+
+  // タイプライター
+  let typeTimer = null;
+  function typeWriter(el, text, speed = 26) {
+    if (typeTimer) clearInterval(typeTimer);
+    el.textContent = '';
+    el.classList.add('typing');
+    let i = 0;
+    typeTimer = setInterval(() => {
+      el.textContent += text[i++];
+      if (i >= text.length) {
+        clearInterval(typeTimer);
+        el.classList.remove('typing');
+      }
+    }, speed);
+  }
+
+  // ランクアップ演出
+  let prevRankName = currentRank();
+  function checkRankUp() {
+    const newRank = currentRank();
+    if (newRank !== prevRankName) {
+      prevRankName = newRank;
+      const el = document.getElementById('rankup');
+      el.innerHTML = `🎖️ ランクアップ！<br><span style="font-size:1.3em">${newRank}</span>`;
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
+      el.addEventListener('animationend', () => el.classList.remove('show'), { once: true });
+      // ランクアップ音
+      try {
+        const ctx = getAudioCtx();
+        [523,659,784,1047].forEach((f, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle'; o.frequency.value = f;
+          g.gain.setValueAtTime(0.12, ctx.currentTime + i*0.13);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.13 + 0.28);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(ctx.currentTime + i*0.13);
+          o.stop(ctx.currentTime + i*0.13 + 0.3);
+        });
+      } catch(e) {}
+    }
+  }
+
+  // プリジャッジ音（審査中のビープ）
+  function playPrejudgeSound() {
+    try {
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      const now = ctx.currentTime;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = 440;
+      o.frequency.linearRampToValueAtTime(330, now + 0.25);
+      g.gain.setValueAtTime(0.07, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now); o.stop(now + 0.3);
+    } catch(e) {}
+  }
+
+  // ---------- メイン処理 ----------
+  const loadingSlot   = document.getElementById('loadingSlot');
+  const slotTextEl    = document.getElementById('slotText');
+  const resultContent = document.getElementById('resultContent');
+  let isJudging = false;
+
+  const loadingPhrases = [
+    '稟議書確認中...', '経理部長に問い合わせ中...', 'AIで審査中...',
+    '領収書をスキャン中...', '判例を検索中...', '過去の申請と照合中...',
+    '経費規定を確認中...', 'コンプライアンスチェック中...', '役員に確認中...',
+    '規定PDF57ページを精読中...', '前例を洗い出し中...', '税務署に問い合わせ中（嘘）...',
+  ];
+
+  btn.addEventListener('click', () => {
+    if (isJudging) return;
+    const itemName = input.value.trim();
+    if (!itemName) {
+      reasonEl.textContent = '品目を入力してください…';
+      paper.classList.add('shake');
+      paper.addEventListener('animationend', () => paper.classList.remove('shake'), { once: true });
+      return;
+    }
+
+    isJudging = true;
+    btn.disabled = true;
+    input.value = '';
+
+    const runJudgment = (forcedType) => {
+    // 前回の審査パネルをリセット
+    const _br = document.getElementById('bossReview');
+    _br.classList.remove('show');
+    document.getElementById('bossOutcome').textContent = '';
+    document.getElementById('shareArea').style.display = 'none';
+
+    // ボタンチャージ演出
+    btn.classList.add('charging');
+    btn.addEventListener('animationend', () => btn.classList.remove('charging'), { once: true });
+
+    // 審査中UI
+    itemnameEl.textContent = `品目：「${itemName}」`;
+    resultContent.style.visibility = 'hidden';
+    loadingSlot.classList.add('show');
+    playPrejudgeSound();
+
+    // ローディングフレーズをローテーション
+    let phraseIdx = Math.floor(Math.random() * loadingPhrases.length);
+    slotTextEl.textContent = loadingPhrases[phraseIdx];
+    const phraseTimer = setInterval(() => {
+      phraseIdx = (phraseIdx + 1) % loadingPhrases.length;
+      slotTextEl.textContent = loadingPhrases[phraseIdx];
+    }, 480);
+
+    const delay = 900 + Math.random() * 900;
+
+    setTimeout(() => {
+      clearInterval(phraseTimer);
+      loadingSlot.classList.remove('show');
+      resultContent.style.visibility = '';
+
+      // ---------- 判定ロジック ----------
+      let bestMatch = null, bestScore = 0;
+      for (const cat of categories) {
+        let score = 0;
+        for (const key of cat.keys) {
+          if (itemName.includes(key)) score += (cat.w || 5);
+        }
+        if (score > bestScore) { bestScore = score; bestMatch = cat; }
+      }
+
+      let stampType, reason;
+      if (forcedType) {
+        stampType = forcedType;
+        const fallback = genericReasons[stampType] || genericReasons['no'];
+        const raw = fallback[Math.floor(Math.random() * fallback.length)];
+        reason = fill(raw, itemName);
+      } else if (bestMatch && Math.random() < 0.90) {
+        stampType = bestMatch.stamp;
+        const raw = bestMatch.reasons[Math.floor(Math.random() * bestMatch.reasons.length)];
+        reason = fill(raw, itemName);
+      } else {
+        const roll = Math.random();
+        if (roll < 0.4) stampType = 'ok';
+        else if (roll < 0.8) stampType = 'no';
+        else stampType = 'micro';
+        const fallback = genericReasons[stampType];
+        const raw = fallback[Math.floor(Math.random() * fallback.length)];
+        reason = fill(raw, itemName);
+      }
+
+      const stampInfo = {
+        ok:    { text: '承認',    cls: 'ok',    tag: 'OK',    color: '#c0392b', flash: 'rgba(192,57,43,0.25)' },
+        no:    { text: '却下',    cls: 'no',    tag: 'NO',    color: '#2980b9', flash: 'rgba(41,128,185,0.25)' },
+        micro: { text: '一部承認', cls: 'micro', tag: 'MICRO', color: '#8e44ad', flash: 'rgba(142,68,173,0.25)' },
+      }[stampType];
+
+      // ハンコアニメーション
+      stampEl.className = 'stamp';
+      stampEl.textContent = stampInfo.text;
+      void stampEl.offsetWidth;
+      stampEl.classList.add(stampInfo.cls, 'show');
+
+      // 理由タイプライター
+      typeWriter(reasonEl, reason, 24);
+
+      // ハンコ着地タイミング (270ms) で全演出を一斉発火
+      setTimeout(() => {
+        playStampSound(stampType);
+        flashScreen(stampInfo.flash);
+        pulseBg(stampType);
+        spawnImpact(stampEl, stampInfo.color);
+        // 着地リング
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const ring = document.createElement('div');
+            ring.className = 'stamp-ring';
+            const sz = 36 + i * 18;
+            ring.style.cssText = `width:${sz}px;height:${sz}px;border-color:${stampInfo.color};
+              top:${50 - sz/2 * 0}%;left:50%;transform:translateX(-50%) translateY(-50%);
+              position:absolute;animation-delay:${i*0.08}s;`;
+            document.querySelector('.stamp-wrap').appendChild(ring);
+            setTimeout(() => ring.remove(), 600);
+          }, i * 55);
+        }
+
+        // スタンプグロー
+        stampEl.classList.add('glow-' + stampType);
+        setTimeout(() => stampEl.classList.remove('glow-' + stampType), 900);
+
+        if (stampType === 'ok') {
+          spawnCoins();
+          setTimeout(spawnConfetti, 100);
+        } else if (stampType === 'no') {
+          shakeScreen();
+          paper.classList.add('crumple');
+          paper.addEventListener('animationend', () => paper.classList.remove('crumple'), { once: true });
+          spawnCrosses();
+        }
+        // 上司の追加審査フェーズへ
+        setTimeout(() => showBossReview(stampType, stampInfo, reason, itemName), 400);
+      }, 270);
+    }, delay);
+    }; // end runJudgment
+
+    if (!chaosActive && Math.random() < 0.28) {
+      triggerChaosEvent((forced) => runJudgment(forced));
+    } else {
+      runJudgment(null);
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') btn.click();
+  });
+
+  // ============================================================
+  // STAMP_INFO_MAP（グローバル参照用）
+  // ============================================================
+  const STAMP_INFO_MAP = {
+    ok:    { text: '承認',     cls: 'ok',    tag: 'OK',    color: '#c0392b', flash: 'rgba(192,57,43,0.25)' },
+    no:    { text: '却下',     cls: 'no',    tag: 'NO',    color: '#2980b9', flash: 'rgba(41,128,185,0.25)' },
+    micro: { text: '一部承認', cls: 'micro', tag: 'MICRO', color: '#8e44ad', flash: 'rgba(142,68,173,0.25)' },
+  };
+
+  // ============================================================
+  // 謎の経費ボタン
+  // ============================================================
+  const mysteryItems = [
+    '宇宙旅行（視察目的）', '時間旅行代', 'タコのマッサージ代', '恐竜の飼育費',
+    '月への出張費', '念力習得費', '透明人間スーツ代', 'ドラゴンのエサ代',
+    '魔法使いへの顧問料', '異次元会議室の賃料', '宇宙人との接待費',
+    'タイムマシン修理代', '空飛ぶ絨毯レンタル代', '水晶玉（意思決定支援ツール）',
+    'UFO遊覧飛行（業務視察）', '幽霊通訳代', 'ブラックホール調査費',
+    'テレパシー通信設備費', '龍族との業務提携費', 'ユニコーン移動費',
+  ];
+
+  document.getElementById('mysteryBtn').addEventListener('click', () => {
+    if (isJudging) return;
+    const item = mysteryItems[Math.floor(Math.random() * mysteryItems.length)];
+    document.getElementById('item').value = item;
+    btn.click();
+  });
+
+  // ============================================================
+  // カオスイベント（上司審査前に30%確率で発動）
+  // ============================================================
+  let chaosActive = false;
+
+  function triggerChaosEvent(callback) {
+    const events = [
+      {
+        emoji: '🔥', title: '領収書が燃えている！',
+        desc: '審査前に領収書に火がついた。\n5秒以内に消火しないと却下確定！',
+        btn: '💧 消火する！', secs: 5,
+        useChase: false,
+        onSuccess: () => null,
+        onFail:    () => 'no',
+      },
+      {
+        emoji: '🏃', title: 'ハンコが逃げ出した！',
+        desc: '経理ハンコが意志を持って逃亡中。\n4秒以内に捕まえれば承認に！',
+        btn: '', secs: 4,
+        useChase: true,
+        onSuccess: () => 'ok',
+        onFail:    () => 'no',
+      },
+    ];
+    const ev = events[Math.floor(Math.random() * events.length)];
+    chaosActive = true;
+
+    const ov      = document.getElementById('chaosOv');
+    const coEmoji = document.getElementById('coEmoji');
+    const coTitle = document.getElementById('coTitle');
+    const coDesc  = document.getElementById('coDesc');
+    const coCd    = document.getElementById('coCd');
+    const coBtn   = document.getElementById('coBtn');
+    const coResult= document.getElementById('coResult');
+    const chaseEl = document.getElementById('stampChase');
+
+    coEmoji.textContent  = ev.emoji;
+    coTitle.textContent  = ev.title;
+    coDesc.textContent   = ev.desc;
+    coCd.textContent     = ev.secs;
+    coBtn.textContent    = ev.btn;
+    coResult.textContent = '';
+    coBtn.disabled       = false;
+    chaseEl.innerHTML    = '';
+    chaseEl.style.display = ev.useChase ? 'block' : 'none';
+    coBtn.style.display   = ev.useChase ? 'none'  : 'inline-block';
+    ov.classList.add('show');
+
+    let timeLeft = ev.secs;
+    let resolved = false;
+
+    if (ev.useChase) {
+      // ハンコが動き回る
+      const stamp = document.createElement('div');
+      stamp.className = 'runaway-stamp';
+      stamp.textContent = '🔨';
+      stamp.style.left = '50%'; stamp.style.top = '50%';
+      chaseEl.appendChild(stamp);
+
+      let moveInterval = setInterval(() => {
+        const maxX = chaseEl.offsetWidth - 40;
+        const maxY = chaseEl.offsetHeight - 40;
+        stamp.style.left = (Math.random() * maxX) + 'px';
+        stamp.style.top  = (Math.random() * maxY) + 'px';
+      }, 500);
+
+      stamp.addEventListener('click', () => {
+        if (resolved) return;
+        resolved = true;
+        clearInterval(moveInterval);
+        clearInterval(cdTimer);
+        stamp.textContent = '✅';
+        const forced = ev.onSuccess();
+        coResult.textContent = '🎉 捕まえた！承認確定！';
+        coResult.style.color = '#2ecc71';
+        setTimeout(() => { ov.classList.remove('show'); chaosActive = false; callback(forced); }, 1000);
+      });
+
+      var cdTimer = setInterval(() => {
+        timeLeft--;
+        coCd.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(cdTimer);
+          clearInterval(moveInterval);
+          if (!resolved) {
+            resolved = true;
+            stamp.textContent = '💨';
+            const forced = ev.onFail();
+            coResult.textContent = '😱 逃げられた…却下確定';
+            coResult.style.color = '#e74c3c';
+            setTimeout(() => { ov.classList.remove('show'); chaosActive = false; callback(forced); }, 1200);
+          }
+        }
+      }, 1000);
+    } else {
+      // 通常ボタン押しイベント
+      var cdTimer = setInterval(() => {
+        timeLeft--;
+        coCd.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(cdTimer);
+          if (!resolved) {
+            resolved = true;
+            coBtn.disabled = true;
+            const forced = ev.onFail();
+            coResult.textContent = '😱 燃え尽きた…却下確定';
+            coResult.style.color = '#e74c3c';
+            setTimeout(() => { ov.classList.remove('show'); chaosActive = false; callback(forced); }, 1200);
+          }
+        }
+      }, 1000);
+
+      coBtn.addEventListener('click', () => {
+        if (resolved) return;
+        resolved = true;
+        clearInterval(cdTimer);
+        coBtn.disabled = true;
+        const forced = ev.onSuccess();
+        coResult.textContent = '✅ 消火成功！通常審査へ';
+        coResult.style.color = '#2ecc71';
+        setTimeout(() => { ov.classList.remove('show'); chaosActive = false; callback(forced); }, 800);
+      }, { once: true });
+    }
+  }
+
+  // ============================================================
+  // 上司の追加審査
+  // ============================================================
+  function showBossReview(stampType, stampInfo, reason, itemName) {
+    const bossReview  = document.getElementById('bossReview');
+    const bossCdBar   = document.getElementById('bossCdBar');
+    const bossCdBtn   = document.getElementById('bossCdBtn');
+    const bossOutcome = document.getElementById('bossOutcome');
+    const bossDesc    = document.getElementById('bossDesc');
+
+    bossReview.classList.add('show');
+    bossCdBar.style.width      = '100%';
+    bossCdBar.style.background = '#ffd166';
+    bossOutcome.textContent    = '';
+    bossCdBtn.disabled         = false;
+
+    const descs = [
+      '上司がじっくり書類を確認中…3秒以内に承認を求めろ！',
+      '上司が難しい顔をしています。今すぐ声をかけろ！',
+      '上司がコーヒーを飲んでいる。今がチャンスだ！',
+      '上司が立ち上がりそう…3秒以内に捕まえろ！',
+    ];
+    bossDesc.textContent = descs[Math.floor(Math.random() * descs.length)];
+
+    let timeLeft = 3;
+    let resolved = false;
+
+    const bossTimer = setInterval(() => {
+      timeLeft--;
+      bossCdBar.style.width      = (timeLeft / 3 * 100) + '%';
+      bossCdBar.style.background = timeLeft <= 1 ? '#e74c3c' : '#ffd166';
+      if (timeLeft <= 0) {
+        clearInterval(bossTimer);
+        if (!resolved) {
+          resolved = true;
+          bossCdBtn.disabled = true;
+          if (stampType === 'ok') {
+            // 承認が却下に変わる
+            const noInfo = STAMP_INFO_MAP['no'];
+            stampEl.className = 'stamp no show';
+            stampEl.textContent = noInfo.text;
+            shakeScreen();
+            spawnCrosses();
+            bossOutcome.textContent = '⏱ 上司が廊下に消えた…承認取消・却下に変更されました';
+            bossOutcome.style.color = '#e74c3c';
+            finishJudgment('no', noInfo, reason, itemName, stampType);
+          } else {
+            bossOutcome.textContent = '⏱ 上司はスルーして通り過ぎた…';
+            bossOutcome.style.color = '#666';
+            finishJudgment(stampType, stampInfo, reason, itemName, stampType);
+          }
+        }
+      }
+    }, 1000);
+
+    bossCdBtn.onclick = () => {
+      if (resolved) return;
+      resolved = true;
+      clearInterval(bossTimer);
+      bossCdBtn.disabled = true;
+      bossOutcome.textContent = '✅ 上司が確認！判定が確定しました';
+      bossOutcome.style.color = '#2ecc71';
+      if (stampType === 'ok' && state.streak >= 2) {
+        showComboBonus(state.streak + 1);
+      }
+      finishJudgment(stampType, stampInfo, reason, itemName, stampType);
+    };
+  }
+
+  // ============================================================
+  // 判定終了処理（状態更新）
+  // ============================================================
+  function finishJudgment(finalType, finalInfo, reason, itemName, originalType) {
+    const oldStreak = state.streak;
+
+    currentShareData = { itemName, stampInfo: finalInfo, reason };
+    document.getElementById('shareArea').style.display = 'block';
+
+    state.total += 1;
+    state.history.push({ name: itemName, stamp: finalInfo.tag });
+    state.resultCounts[finalType] += 1;
+    state.lastResults.push(finalType);
+    state.itemSeen[itemName] = (state.itemSeen[itemName] || 0) + 1;
+    state.streak = finalType === 'ok' ? state.streak + 1 : 0;
+    state.maxStreak = Math.max(state.maxStreak || 0, state.streak);
+
+    // 経理部長登場（連続承認が3以上で途切れた場合）
+    if (finalType !== 'ok' && oldStreak >= 3) {
+      setTimeout(() => showChiefAccountant(oldStreak), 600);
+    }
+
+    checkAchievements();
+    checkRankUp();
+    updateStatusbar();
+    renderHistory();
+    renderAchievements();
+    renderEffects();
+    save();
+
+    isJudging = false;
+    btn.disabled = false;
+    input.focus();
+  }
+
+  // ============================================================
+  // コンボボーナス演出
+  // ============================================================
+  function showComboBonus(n) {
+    const el = document.getElementById('rankup');
+    el.innerHTML = `🔥 ${n}連続承認！<br><small style="font-size:0.75em">コンボボーナス！</small>`;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+    el.addEventListener('animationend', () => el.classList.remove('show'), { once: true });
+    try {
+      const ctx = getAudioCtx();
+      [440, 550, 660, 880, 1100].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.09, ctx.currentTime + i * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.25);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + i * 0.08);
+        o.stop(ctx.currentTime + i * 0.08 + 0.27);
+      });
+    } catch(e) {}
+  }
+
+  // ============================================================
+  // 経理部長登場
+  // ============================================================
+  function showChiefAccountant(streak) {
+    const msgs = [
+      `${streak}連続承認が途切れましたね。最近の審査が甘いと思っていました。`,
+      `経理部長の私が直々に確認します。${streak}連続は評価しますが、今回の判断は問題です。`,
+      `ほう。${streak}連続とは優秀でしたが、この申請内容は見過ごせません。`,
+      `${streak}連続ご苦労様でした。今後は私が直接審査しますので覚悟してください。`,
+    ];
+    document.getElementById('chiefMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    document.getElementById('chiefOverlay').classList.add('show');
+  }
+
+  // ---------- SNS共有 ----------
+  let currentShareData = null;
+
+  document.getElementById('shareTwitter').addEventListener('click', () => {
+    if (!currentShareData) return;
+    const { itemName, stampInfo, reason } = currentShareData;
+    const text = `「${itemName}」を経費申請したら…\n→ ${stampInfo.text}！\n\n${reason}\n\n#経費で落とせますか`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+  });
+
+  document.getElementById('shareLine').addEventListener('click', () => {
+    if (!currentShareData) return;
+    const { itemName, stampInfo, reason } = currentShareData;
+    const text = `「${itemName}」を経費申請したら → ${stampInfo.text}！\n${reason}\n#経費で落とせますか`;
+    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, '_blank');
+  });
+
+  document.getElementById('shareCopy').addEventListener('click', () => {
+    if (!currentShareData) return;
+    const { itemName, stampInfo, reason } = currentShareData;
+    const text = `「${itemName}」を経費申請したら → ${stampInfo.text}！\n${reason}\n#経費で落とせますか`;
+    navigator.clipboard.writeText(text).then(() => showToast('📋 クリップボードにコピーしました'));
+  });
+
+  // 初期表示
+  updateStatusbar();
+  renderHistory();
+  renderAchievements();
+  renderEffects();
+</script>
+</body>
+</html>

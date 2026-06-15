@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会議は踊る MAX</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: #0a0a16;
+  color: #eee;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px 40px;
+}
+h1 { font-size: 1.3em; margin: 10px 0 2px; color: #ffd166; letter-spacing: 0.05em; }
+.sub { color: #555; font-size: 0.8em; margin-bottom: 10px; }
+
+/* タイトル画面追加スタイル */
+#titleScreen {
+  position: fixed; inset: 0; background: #0a0a16;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 4000; padding: 24px; text-align: center; transition: opacity 0.5s;
+}
+.ts-logo { font-size: 3.5em; margin-bottom: 10px; animation: tsFloat 3s ease-in-out infinite; }
+@keyframes tsFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+#titleScreen h2 { font-size: 1.4em; color: #ffd166; margin-bottom: 10px; }
+#titleScreen p { color: #555; font-size: 0.85em; line-height: 1.8; max-width: 290px; margin: 0 0 6px; }
+.ts-start {
+  margin-top: 26px; padding: 15px 44px;
+  background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px;
+  font-size: 1.1em; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 20px rgba(255,209,102,0.28);
+  transition: transform 0.1s;
+}
+.ts-start:active { transform: scale(0.96); }
+.ts-tips { margin-top: 14px; font-size: 0.72em; color: #333; }
+
+.screen { display: none; width: 390px; max-width: 98vw; }
+.screen.active { display: block; }
+
+/* ===== TITLE ===== */
+.title-logo { font-size: 3em; margin: 20px 0 8px; }
+.title-copy { color: #aaa; font-size: 0.88em; margin-bottom: 24px; line-height: 1.6; }
+.title-btn {
+  width: 100%; padding: 15px;
+  background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px;
+  font-size: 1.1em; font-weight: bold; cursor: pointer;
+  margin-bottom: 10px;
+}
+.title-sub-btn {
+  width: 100%; padding: 11px;
+  background: #2a2a45; color: #ccc;
+  border: 1px solid #444; border-radius: 10px;
+  font-size: 0.9em; cursor: pointer;
+}
+
+/* ===== SETUP ===== */
+.setup-box { background: #14142a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.setup-box h2 { font-size: 0.88em; color: #ffd166; margin-bottom: 10px; }
+.char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.char-card {
+  background: #10101e; border: 2px solid #2a2a45;
+  border-radius: 12px; padding: 12px 10px; cursor: pointer;
+  transition: all 0.15s; text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.char-card:hover { border-color: #555; background: #1a1a35; }
+.char-card.selected {
+  border-color: #ffd166; background: #1e1c08;
+  box-shadow: 0 0 0 3px rgba(255,209,102,0.15);
+}
+.char-card.selected::after {
+  content: '✓'; position: absolute; top: 8px; right: 10px;
+  font-size: 0.85em; color: #ffd166; font-weight: bold;
+}
+.char-card .ce { font-size: 1.8em; margin-bottom: 4px; display: block; }
+.char-card .cn { font-size: 0.88em; font-weight: bold; margin: 0 0 3px; }
+.char-card .cd { font-size: 0.72em; color: #888; line-height: 1.4; }
+.char-card .cs { font-size: 0.68em; color: #ffd166; margin-top: 5px; }
+
+.diff-stars { color: #f39c12; font-size: 0.8em; }
+.agenda-list { display: flex; flex-direction: column; gap: 6px; }
+.agenda-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #10101e; border-radius: 10px; padding: 12px 14px;
+  font-size: 0.86em; cursor: pointer; border: 2px solid #2a2a45;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.agenda-row:hover { background: #1a1a35; border-color: #444; }
+.agenda-row.selected { border-color: #ffd166; background: #1e1c08; box-shadow: 0 0 0 3px rgba(255,209,102,0.12); }
+.agenda-row .ar { color: #aaa; font-size: 0.8em; }
+
+.go-btn {
+  width: 100%; padding: 14px;
+  background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px;
+  font-size: 1.05em; font-weight: bold; cursor: pointer; margin-top: 4px;
+}
+
+/* ===== GAME ===== */
+.game-top {
+  display: flex; justify-content: space-between;
+  background: #14142a; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 8px; gap: 8px;
+}
+.gt-block { flex: 1; }
+.gt-label { font-size: 0.7em; color: #666; margin-bottom: 3px; }
+.gt-val { font-size: 1.1em; font-weight: bold; }
+.gt-val.red { color: #e74c3c; font-size: 1.5em; font-variant-numeric: tabular-nums; }
+.gt-val.green { color: #2ecc71; }
+.gt-val.yellow { color: #ffd166; }
+#gtTime.low { animation: clockWarn 0.9s ease-in-out infinite; }
+@keyframes clockWarn { 0%,100%{ opacity:1 } 50%{ opacity:0.45 } }
+
+.bar-wrap { height: 10px; background: #111; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+.bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s; }
+.bar-mood { background: linear-gradient(90deg,#e74c3c,#f39c12,#2ecc71); }
+.bar-prog { background: linear-gradient(90deg,#3498db,#2ecc71); }
+.bar-speak { background: #f39c12; }
+.bar-fill.danger { background: #e74c3c !important; }
+
+/* 議題ステータス */
+.agenda-status {
+  background: #14142a; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 8px;
+}
+.as-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.as-name { font-size: 0.88em; font-weight: bold; color: #ffd166; }
+.as-num { font-size: 0.75em; color: #666; }
+.as-bars { display: flex; flex-direction: column; gap: 4px; }
+.as-row { display: flex; align-items: center; gap: 8px; font-size: 0.75em; color: #888; }
+.as-row .bar-wrap { flex: 1; }
+
+/* 参加者 */
+.participants {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.ptag {
+  background: #14142a; border: 1px solid #2a2a45;
+  border-radius: 20px; padding: 5px 10px;
+  font-size: 0.78em; display: flex; align-items: center; gap: 4px;
+  transition: border-color 0.3s;
+}
+.ptag.speaking { border-color: #ffd166; background: #25253a; }
+.ptag.angry { border-color: #e74c3c; }
+
+/* ログ */
+.log {
+  background: #060610; border-radius: 8px; padding: 10px;
+  height: 100px; overflow-y: auto;
+  font-size: 0.8em; line-height: 1.6; margin-bottom: 8px; text-align: left;
+}
+.log-entry.derail { color: #e74c3c; }
+.log-entry.progress { color: #2ecc71; }
+.log-entry.event { color: #ffd166; }
+.log-entry.system { color: #666; }
+.log-entry.story { color: #a78bfa; }
+
+/* イベントカード */
+.event-area {
+  background: #14142a; border-radius: 12px;
+  padding: 16px 14px; margin-bottom: 8px; min-height: 130px;
+  position: relative; overflow: hidden;
+}
+.event-area::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #ffd166, #f39c12, #e74c3c);
+}
+.ev-timer {
+  position: absolute; top: 10px; right: 12px;
+  width: 56px; height: 56px;
+  font-size: 1.55em; font-weight: bold; color: #fff;
+  background: #27ae60;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 14px rgba(39,174,96,0.5);
+  transition: background 0.4s, box-shadow 0.4s;
+  letter-spacing: -0.02em;
+}
+.ev-timer.warning {
+  background: #e67e22;
+  box-shadow: 0 0 14px rgba(230,126,34,0.6);
+}
+.ev-timer.urgent {
+  background: #e74c3c;
+  box-shadow: 0 0 14px rgba(231,76,60,0.6);
+  animation: timerPulse 0.45s ease-in-out infinite alternate;
+}
+@keyframes timerPulse {
+  0%  { transform: scale(1);    box-shadow: 0 0 8px  rgba(231,76,60,0.4); }
+  100%{ transform: scale(1.15); box-shadow: 0 0 22px rgba(231,76,60,0.85); }
+}
+.ev-tag {
+  display: inline-block; font-size: 0.72em; padding: 3px 10px;
+  border-radius: 12px; margin-bottom: 8px; font-weight: bold; letter-spacing: 0.04em;
+}
+.ev-tag.danger { background: #e74c3c22; color: #e74c3c; border: 1px solid #e74c3c55; }
+.ev-tag.chance { background: #2ecc7122; color: #2ecc71; border: 1px solid #2ecc7155; }
+.ev-tag.crisis { background: #9b59b622; color: #a78bfa; border: 1px solid #9b59b655; }
+.ev-tag.normal { background: #3498db22; color: #74b9ff; border: 1px solid #3498db55; }
+.ev-title { font-size: 1em; font-weight: bold; margin-bottom: 5px; line-height: 1.4; padding-right: 52px; }
+.ev-desc { font-size: 0.83em; color: #bbb; line-height: 1.6; margin-bottom: 12px; }
+.ev-choices { display: flex; flex-direction: column; gap: 8px; }
+.ev-btn {
+  padding: 12px 14px; background: #10101e;
+  border: 1.5px solid #2a2a50; border-radius: 10px;
+  color: #eee; font-size: 0.84em; cursor: pointer;
+  text-align: left; transition: all 0.12s;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.ev-btn:hover { background: #1a1a3c; border-color: #5a5a90; }
+.ev-btn:active { transform: scale(0.96); background: #20204a; border-color: #ffd16688; }
+.ev-btn .hint {
+  font-size: 0.72em; color: #555;
+  background: #0a0a16; border-radius: 6px;
+  padding: 3px 7px; white-space: nowrap; flex-shrink: 0;
+  border: 1px solid #1e1e38;
+}
+.ev-btn:hover .hint { color: #aaa; border-color: #3a3a60; }
+.ev-btn .hint.good { color: #2ecc71; background: #0a1a0f; border-color: #1e3a20; }
+.ev-btn .hint.bad  { color: #e74c3c; background: #1a0a0a; border-color: #3a1e1e; }
+.ev-waiting { color: #2a2a44; font-size: 0.88em; text-align: center; padding: 28px 0; }
+/* 次イベントカウントダウンバー */
+.ev-next-wrap { padding: 18px 0 12px; }
+.ev-next-txt { font-size: 0.85em; text-align: center; margin-bottom: 10px; color: #555; transition: color 0.3s; }
+.ev-next-txt b { font-variant-numeric: tabular-nums; }
+.ev-next-bar-wrap { height: 4px; background: #1a1a30; border-radius: 2px; overflow: hidden; }
+.ev-next-bar { height: 100%; width: 100%; background: #ffd166; border-radius: 2px; transition: width 0.9s linear, background 0.3s; }
+/* コンボ演出 */
+.ev-combo-wrap { padding: 26px 0; }
+.ev-combo-wrap .ev-next-txt {
+  font-size: 1.05em; font-weight: bold;
+  animation: comboFlash 0.25s ease-out 3;
+}
+@keyframes comboFlash {
+  0%  { opacity:0; transform: scale(0.9); }
+  50% { opacity:1; transform: scale(1.06); }
+  100%{ opacity:1; transform: scale(1); }
+}
+/* 緊急モードバッジ */
+.emergency-badge {
+  display: none; position: absolute; top: 8px; left: 10px;
+  font-size: 0.68em; font-weight: bold; letter-spacing: 0.04em;
+  color: #e74c3c; background: #e74c3c18; border: 1px solid #e74c3c55;
+  border-radius: 12px; padding: 2px 8px;
+  animation: badgePulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes badgePulse { to { opacity: 0.4; } }
+.emergency-badge.show { display: inline-block; }
+/* 選択番号バッジ */
+.ev-btn .ch-num {
+  font-size: 0.82em; font-weight: bold; color: #ffd166;
+  background: #ffd16618; border: 1px solid #ffd16640;
+  border-radius: 50%; width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+/* 議題完了フラッシュ */
+@keyframes agendaDone {
+  0%   { background: #14142a; }
+  30%  { background: #1a3a1a; }
+  100% { background: #14142a; }
+}
+.agenda-done-flash { animation: agendaDone 0.7s ease-out; }
+/* 緊急ボタン */
+.emergency-btn-wrap { margin-top: 10px; }
+.emergency-btn {
+  width: 100%; padding: 12px 16px;
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 0.95em; font-weight: bold; cursor: pointer;
+  font-family: inherit; letter-spacing: 0.03em;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 0.1s;
+  animation: emergencyGlow 1.8s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+.emergency-btn:active { transform: scale(0.96); }
+.emergency-btn:disabled { opacity: 0.35; animation: none; cursor: not-allowed; }
+.emergency-hint-sm { font-size: 0.7em; opacity: 0.75; font-weight: normal; }
+.emergency-cd-bar-wrap { height: 3px; background: #1a1a2a; border-radius: 2px; overflow: hidden; margin-top: 5px; }
+.emergency-cd-bar { height: 100%; background: #e74c3c; border-radius: 2px; transition: width 1s linear; }
+.emergency-cd-txt { font-size: 0.7em; color: #444; text-align: center; margin-top: 3px; min-height: 14px; }
+@keyframes emergencyGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
+  50%      { box-shadow: 0 0 12px 3px rgba(231,76,60,0.35); }
+}
+/* モバイル最適化 */
+@media (max-width: 480px) {
+  body { padding: 8px 4px 30px; }
+  h1 { font-size: 1.1em; }
+  .ev-btn { padding: 13px 10px; }
+  .char-card { padding: 12px 8px; }
+  .char-card .ce { font-size: 2em; }
+  .log { height: 80px; }
+  .game-top { gap: 6px; padding: 8px 10px; }
+  .gt-label { font-size: 0.65em; }
+  .ev-timer { width: 50px; height: 50px; font-size: 1.4em; }
+}
+
+/* スコアバー */
+.score-row {
+  display: flex; justify-content: space-around;
+  background: #14142a; border-radius: 10px;
+  padding: 8px; font-size: 0.78em; color: #666; margin-bottom: 8px;
+}
+.score-row b { color: #eee; display: block; font-size: 1.1em; }
+
+/* ===== RESULT ===== */
+.result-box {
+  background: #14142a; border-radius: 14px; padding: 20px; text-align: center;
+}
+.result-ending { font-size: 0.8em; color: #a78bfa; margin-bottom: 4px; }
+.result-rank { font-size: 3em; margin: 6px 0; }
+.result-title { font-size: 1em; color: #ffd166; margin-bottom: 14px; }
+.result-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-bottom: 14px; text-align: left;
+}
+.rg-cell { background: #0a0a16; border-radius: 8px; padding: 8px 10px; }
+.rg-label { font-size: 0.72em; color: #666; }
+.rg-val { font-size: 1.05em; font-weight: bold; color: #ffd166; }
+.ach-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+.ach-badge {
+  background: #2a2a40; border: 1px solid #444;
+  border-radius: 20px; padding: 4px 10px; font-size: 0.75em; color: #aaa;
+}
+.ach-badge.unlocked { background: #ffd16622; border-color: #ffd166; color: #ffd166; }
+.result-story { font-size: 0.82em; color: #a78bfa; line-height: 1.6; margin-bottom: 14px; text-align: left; background: #0a0a16; border-radius: 8px; padding: 10px; }
+.retry-btn {
+  width: 100%; padding: 13px;
+  background: #ffd166; color: #0a0a16;
+  border: none; border-radius: 10px;
+  font-size: 1em; font-weight: bold; cursor: pointer;
+}
+
+/* ===== ACH POPUP ===== */
+.ach-popup {
+  position: fixed; bottom: 20px; right: 12px;
+  background: #2a2a40; border: 1px solid #ffd166;
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 0.82em; z-index: 999;
+  transform: translateX(120%); transition: transform 0.4s;
+  max-width: 200px;
+}
+.ach-popup.show { transform: translateX(0); }
+.ach-popup .ap-title { color: #ffd166; font-weight: bold; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<h1>🗣️ 会議は踊る MAX</h1>
+<div class="sub">判断・駆け引き・脱線——すべてが会議を決める</div>
+
+<!-- タイトル画面（全画面版） -->
+<div id="titleScreen">
+  <div class="ts-logo">🏢</div>
+  <h2>会議は踊る MAX</h2>
+  <p>脱線する。空気を読む。根回しする。<br>それでも会議は終わらない。<br><span style="color:#ffd166">あなたなら全議題を決められるか？</span></p>
+  <button class="ts-start" onclick="enterSetup()">🔔 会議を始める</button>
+  <div class="ts-tips">💡 参加者2〜4人・議題セットを選んでスタート</div>
+</div>
+
+<!-- TITLE（画面遷移用に残す） -->
+<div class="screen" id="titleScreenOld">
+  <div style="text-align:center;padding:20px 0">
+    <div class="title-logo">🏢</div>
+    <div style="font-size:1.3em;font-weight:bold;color:#ffd166;margin-bottom:8px">会議は踊る MAX</div>
+    <button class="title-btn" id="toSetupBtn">🔔 会議を始める</button>
+    <button class="title-sub-btn" id="toAchBtn">🏆 実績を見る</button>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="screen" id="setupScreen">
+  <div class="setup-box">
+    <h2>👥 参加者キャラを選ぶ（2〜4人）</h2>
+    <div class="char-grid" id="charGrid"></div>
+  </div>
+  <div class="setup-box">
+    <h2>📋 議題セットを選ぶ</h2>
+    <div class="agenda-list" id="agendaList"></div>
+  </div>
+  <button class="go-btn" id="goBtn">会議スタート 🔔</button>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="gameScreen">
+  <div class="game-top">
+    <div class="gt-block">
+      <div class="gt-label">残り時間</div>
+      <div class="gt-val red" id="gtTime">20:00</div>
+    </div>
+    <div class="gt-block">
+      <div class="gt-label">上司の機嫌</div>
+      <div class="gt-val" id="gtMood">😊 80</div>
+      <div class="bar-wrap"><div class="bar-fill bar-mood" id="barMood" style="width:80%"></div></div>
+    </div>
+    <div class="gt-block">
+      <div class="gt-label">発言権</div>
+      <div class="gt-val yellow" id="gtSpeak">70</div>
+      <div class="bar-wrap"><div class="bar-fill bar-speak" id="barSpeak" style="width:70%"></div></div>
+    </div>
+  </div>
+
+  <div class="agenda-status">
+    <div class="as-top">
+      <div class="as-name" id="asName">📋 ---</div>
+      <div class="as-num" id="asNum">議題 1/5</div>
+    </div>
+    <div class="as-bars">
+      <div class="as-row">
+        <span style="width:36px">進捗</span>
+        <div class="bar-wrap"><div class="bar-fill bar-prog" id="barProg" style="width:0%"></div></div>
+        <span id="progPct" style="width:32px;text-align:right">0%</span>
+      </div>
+    </div>
+    <div style="font-size:0.72em;color:#666;margin-top:4px" id="asStatus">会議中…</div>
+  </div>
+
+  <div class="participants" id="participants"></div>
+  <div class="log" id="log"></div>
+
+  <div class="event-area" id="eventArea" style="position:relative">
+    <span class="emergency-badge" id="emergencyBadge">🔥 緊急会議モード</span>
+    <div class="ev-next-wrap"><div class="ev-next-txt">⏳ 会議が始まります…</div></div>
+  </div>
+
+  <div class="score-row">
+    <div><b id="stDerail">0</b>回<br>脱線</div>
+    <div><b id="stDone">0</b>個<br>完了</div>
+    <div><b id="stScore">0</b>pt<br>スコア</div>
+    <div><b id="stCost">¥0</b><br>コスト</div>
+  </div>
+
+  <div class="emergency-btn-wrap">
+    <button id="emergencyBtn" class="emergency-btn">
+      🚨 緊急ボタン
+      <span class="emergency-hint-sm">50%で進捗+30 / 50%で爆発的悪化</span>
+    </button>
+    <div class="emergency-cd-bar-wrap"><div class="emergency-cd-bar" id="emergencyCdBar" style="width:0%"></div></div>
+    <div class="emergency-cd-txt" id="emergencyCdTxt"></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="resultScreen">
+  <div class="result-box">
+    <div class="result-ending" id="resEnding"></div>
+    <div class="result-rank" id="resRank">B</div>
+    <div class="result-title" id="resTitle"></div>
+    <div class="result-grid" id="resGrid"></div>
+    <div class="result-story" id="resStory"></div>
+    <div class="ach-list" id="resAch"></div>
+    <button class="retry-btn" id="retryBtn">もう一度挑戦</button>
+  </div>
+</div>
+
+<div class="ach-popup" id="achPopup">
+  <div class="ap-title">🏆 実績解除！</div>
+  <div id="achPopupText"></div>
+</div>
+
+<script>
+// ============================================================
+// データ定義
+// ============================================================
+const CHARS = [
+  { id:'bucho',    e:'👔', name:'喋りすぎ部長',
+    desc:'脱線させやすいが決断力が高い',
+    skill:'「部長に決めてもらう」選択肢が追加',
+    onEvent: (ev) => ev.choices.push({ label:'👔 部長に強制決定させる', hint:'機嫌-5 進捗+30', effect: s=>{ s.mood=Math.max(0,s.mood-5); s.progress=Math.min(100,s.progress+30); s.score+=10; addLog('👔 部長が強引に決めた！進捗大幅UP','progress'); }}) },
+  { id:'engineer', e:'💻', name:'無言エンジニア',
+    desc:'脱線しにくいが発言を促さないと進まない',
+    skill:'「エンジニアに振る」で技術的解決',
+    onEvent: (ev) => ev.choices.push({ label:'💻 エンジニアに技術判断させる', hint:'確率で大進捗', effect: s=>{ if(Math.random()<0.6){ s.progress=Math.min(100,s.progress+25); addLog('💻 エンジニアが的確な答えを出した！','progress'); } else { addLog('💻 エンジニアが「…」と無言のまま…','system'); } }}) },
+  { id:'rookie',   e:'🐣', name:'新人くん',
+    desc:'的外れな発言で場が和む',
+    skill:'機嫌回復イベントが追加',
+    onEvent: (ev) => { if(Math.random()<0.3){ ev.choices.push({ label:'🐣 新人の天然発言で場を和ませる', hint:'機嫌+20', effect: s=>{ s.mood=Math.min(100,s.mood+20); addLog('🐣 新人の一言で会議室に笑いが起きた！','event'); }}); } } },
+  { id:'soudanin', e:'🕵️', name:'顧問おじさん',
+    desc:'昔話で脱線するが根回し効果UP',
+    skill:'根回し時の効果が1.5倍',
+    onEvent: (ev) => { if(Math.random()<0.25){ ev.choices.push({ label:'🕵️ 昔話を聞いてあげる', hint:'時間-30秒 機嫌+15', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-30); s.mood=Math.min(100,s.mood+15); addLog('🕵️ 顧問が昔話を始めた…でも場が和んだ','event'); }}); } } },
+  { id:'pr',       e:'📣', name:'やる気PRさん',
+    desc:'発言権消費が少なく安定した進行',
+    skill:'発言権の消費が半分',
+    speakEfficient: true,
+    onEvent: (ev) => ev.choices.push({ label:'📣 PRさんにまとめてもらう', hint:'発言権-10 進捗+15', effect: s=>{ s.speakGauge=Math.max(0,s.speakGauge-10); s.progress=Math.min(100,s.progress+15); addLog('📣 PRさんがうまくまとめてくれた！','progress'); }}) },
+  { id:'sleepy',   e:'😴', name:'居眠り課長',
+    desc:'何もしないが突然覚醒することがある',
+    skill:'低確率で神発言が炸裂',
+    onEvent: (ev) => { if(Math.random()<0.15){ ev.choices.push({ label:'😴 課長を起こしてみる', hint:'大ギャンブル', effect: s=>{ if(Math.random()<0.4){ s.progress=Math.min(100,s.progress+40); s.score+=50; addLog('😴 覚醒した課長が神発言！進捗+40 スコア+50','event'); } else { s.mood=Math.max(0,s.mood-20); addLog('😴 起こしたら超不機嫌に…機嫌-20','derail'); } }}); } } },
+];
+
+const AGENDA_SETS = [
+  { id:'standard', name:'スタンダード', desc:'バランスの良い標準コース', diff:'★☆☆',
+    agendas:['Q3売上目標','リモートワーク規程','社員食堂メニュー','採用計画','コーポレートロゴ'] },
+  { id:'hard',     name:'激務コース',  desc:'脱線しやすい議題が続く', diff:'★★★',
+    agendas:['オフィス移転','社内SNS活用','経費システム刷新','福利厚生見直し','コンプライアンス研修'] },
+  { id:'chaos',    name:'カオスコース', desc:'何が起きるかわからない', diff:'💀💀💀',
+    agendas:['来期方針（未定）','謎の新規事業','なんか全部','社長の思いつき','とにかく会議'] },
+];
+
+// 30種イベントカード
+const ALL_EVENTS = [
+  // ── DANGER（脱線・ピンチ系）
+  { tag:'danger', title:'💥 突然の脱線',
+    desc:'誰かが「そういえば昨日の野球見ました？」と言い出した。',
+    choices:[
+      { label:'無視して議題に戻す', hint:'進捗+5 発言権-15', effect: s=>{ s.progress+=5; s.speakGauge=Math.max(0,s.speakGauge-15); addLog('強引に議題に戻した','progress'); }},
+      { label:'少し乗っかる', hint:'機嫌+10 進捗-10', effect: s=>{ s.mood+=10; s.progress=Math.max(0,s.progress-10); addLog('脱線に乗ってしまった…','derail'); }},
+      { label:'議事録に「雑談」と記録する', hint:'スコア+5', effect: s=>{ s.score+=5; addLog('冷静に記録した。スコア+5','system'); }},
+    ]},
+  { tag:'danger', title:'🔌 プロジェクター故障',
+    desc:'プロジェクターが突然映らなくなった。資料が見えない。',
+    choices:[
+      { label:'紙で配布する（準備していた）', hint:'進捗-5 スコア+20', effect: s=>{ s.progress=Math.max(0,s.progress-5); s.score+=20; addLog('機転を利かせた！スコア+20','progress'); }},
+      { label:'スマホで見せる', hint:'進捗-10 時間-30秒', effect: s=>{ s.progress=Math.max(0,s.progress-10); s.timeLeft=Math.max(0,s.timeLeft-30); addLog('スマホで共有した。時間ロス','system'); }},
+      { label:'口頭だけで続行', hint:'機嫌-15', effect: s=>{ s.mood=Math.max(0,s.mood-15); addLog('口頭だけは伝わらなかった…','derail'); }},
+    ]},
+  { tag:'danger', title:'😡 上司の機嫌が急落',
+    desc:'「この件、先週も同じ話をしたよね？」と上司が低い声で言った。',
+    choices:[
+      { label:'「改善しました」と前向きに返す', hint:'機嫌+10 スコア+15', effect: s=>{ s.mood+=10; s.score+=15; addLog('上手くフォロー！','progress'); }},
+      { label:'謝罪する', hint:'機嫌+5', effect: s=>{ s.mood+=5; addLog('素直に謝った','system'); }},
+      { label:'「議事録を見てください」と言う', hint:'機嫌-20', effect: s=>{ s.mood=Math.max(0,s.mood-20); addLog('最悪の返し…機嫌急落','derail'); }},
+    ]},
+  { tag:'danger', title:'📱 全員スマホ注目',
+    desc:'グループLINEに通知が来て全員がスマホを見始めた。',
+    choices:[
+      { label:'「スマホを置いてください」と言う', hint:'機嫌-5 進捗+10', effect: s=>{ s.mood=Math.max(0,s.mood-5); s.progress+=10; addLog('一応従った','system'); }},
+      { label:'自分もスマホを確認する', hint:'進捗-15', effect: s=>{ s.progress=Math.max(0,s.progress-15); addLog('全員でスマホを見ていた…','derail'); }},
+      { label:'短い休憩を提案する', hint:'機嫌+5 発言権+10', effect: s=>{ s.mood+=5; s.speakGauge=Math.min(100,s.speakGauge+10); addLog('リフレッシュ！','event'); }},
+    ]},
+  { tag:'danger', title:'🚪 田中さん乱入',
+    desc:'関係ない部署の田中さんが「ちょっとよろしいですか？」と入ってきた。',
+    choices:[
+      { label:'「後にしてください」と断る', hint:'機嫌-5 進捗維持', effect: s=>{ s.mood=Math.max(0,s.mood-5); addLog('断ったが気まずい空気に','system'); }},
+      { label:'「5分だけ」と許可する', hint:'進捗-15 スコア+10', effect: s=>{ s.progress=Math.max(0,s.progress-15); s.score+=10; addLog('田中さんの話が長くなった…','derail'); }},
+      { label:'「今は無理です」とドアを閉める', hint:'スコア+25', effect: s=>{ s.score+=25; addLog('毅然とした対応！スコア+25','progress'); }},
+    ]},
+  { tag:'danger', title:'🐦 鳥が窓に激突',
+    desc:'「バン！」という音とともに全員が窓を見た。鳥が激突したらしい。',
+    choices:[
+      { label:'無視して続ける', hint:'機嫌-10 発言権-5', effect: s=>{ s.mood=Math.max(0,s.mood-10); s.speakGauge=Math.max(0,s.speakGauge-5); addLog('みんなの視線が窓に…','derail'); }},
+      { label:'「大丈夫でしたか」と鳥を心配', hint:'機嫌+15', effect: s=>{ s.mood+=15; addLog('人間味ある対応で場が和んだ','event'); }},
+      { label:'「吉兆ですね」と前向きに言う', hint:'スコア+20 機嫌+5', effect: s=>{ s.score+=20; s.mood+=5; addLog('笑いが起きた！スコア+20','progress'); }},
+    ]},
+  { tag:'danger', title:'💤 議事録担当が居眠り',
+    desc:'「今なんて言いましたっけ？」と議事録担当が5回連続で聞いてきた。',
+    choices:[
+      { label:'もう一度説明する', hint:'進捗-5 発言権-10', effect: s=>{ s.progress=Math.max(0,s.progress-5); s.speakGauge=Math.max(0,s.speakGauge-10); addLog('また説明した…','system'); }},
+      { label:'自分で議事録を取り始める', hint:'発言権-20 スコア+15', effect: s=>{ s.speakGauge=Math.max(0,s.speakGauge-20); s.score+=15; addLog('兼任で頑張った。スコア+15','progress'); }},
+      { label:'「後で録音を聞いてください」と言う', hint:'スコア+10', effect: s=>{ s.score+=10; addLog('スマートな対応','event'); }},
+    ]},
+  { tag:'danger', title:'🔊 Zoomハウリング',
+    desc:'リモート参加者のマイクがハウリングして会議が止まった。',
+    choices:[
+      { label:'「ミュートにしてください」と言う', hint:'時間-20秒 進捗-5', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-20); s.progress=Math.max(0,s.progress-5); addLog('ハウリング収まった','system'); }},
+      { label:'リモートを一時切断する', hint:'進捗+5 スコア+10', effect: s=>{ s.progress+=5; s.score+=10; addLog('思い切って切断。会議再開','progress'); }},
+      { label:'そのまま叫んで続ける', hint:'機嫌-20', effect: s=>{ s.mood=Math.max(0,s.mood-20); addLog('全員が頭痛を訴えた…','derail'); }},
+    ]},
+  { tag:'danger', title:'📋 資料の誤字発覚',
+    desc:'スライドの一番目立つ箇所に「決断」が「決弾」と書いてあった。',
+    choices:[
+      { label:'「誤字ですね、失礼しました」とスルー', hint:'スコア+10', effect: s=>{ s.score+=10; addLog('プロの対応。スコア+10','progress'); }},
+      { label:'修正のため5分中断する', hint:'時間-60秒 進捗-10', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-60); s.progress=Math.max(0,s.progress-10); addLog('修正のため中断した','system'); }},
+      { label:'「わざとです」と強がる', hint:'機嫌±ランダム', effect: s=>{ if(Math.random()<0.5){ s.mood+=10; s.score+=15; addLog('上司が笑った！機嫌UP','event'); } else { s.mood=Math.max(0,s.mood-10); addLog('白けた…','derail'); } }},
+    ]},
+  { tag:'danger', title:'⏰ 部屋の予約時間終了',
+    desc:'「あと5分で次の予約が入っています」と総務から連絡が来た。',
+    choices:[
+      { label:'「次の会議室に移動する」と提案', hint:'時間-90秒', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-90); addLog('移動のロス。時間-90秒','derail'); }},
+      { label:'「立ったまま続ける」と宣言', hint:'発言権-10 進捗+10', effect: s=>{ s.speakGauge=Math.max(0,s.speakGauge-10); s.progress+=10; addLog('スタンディング会議で巻き返し！','progress'); }},
+      { label:'「今日はここまで」と終わらせる', hint:'スコア-50', effect: s=>{ s.score=Math.max(0,s.score-50); addLog('強制終了…スコア-50','derail'); }},
+    ]},
+  // ── CHANCE（チャンス系）
+  { tag:'chance', title:'✨ 奇跡の集中タイム',
+    desc:'全員が珍しく資料を真剣に見ている。今がチャンス！',
+    choices:[
+      { label:'一気に議題を押し進める', hint:'進捗+35 スコア+30', effect: s=>{ s.progress=Math.min(100,s.progress+35); s.score+=30; addLog('一気に決まった！進捗+35','progress'); }},
+      { label:'慎重に一点ずつ確認する', hint:'進捗+15 発言権-5', effect: s=>{ s.progress=Math.min(100,s.progress+15); s.speakGauge=Math.max(0,s.speakGauge-5); addLog('丁寧に確認した。進捗+15','progress'); }},
+      { label:'様子を見る（もったいない）', hint:'何も起きない', effect: s=>{ addLog('チャンスを逃した…','system'); }},
+    ]},
+  { tag:'chance', title:'🎯 鋭い発言が出た',
+    desc:'参加者の一人が核心を突く発言をした。場の空気が変わった。',
+    choices:[
+      { label:'「その通りです！」と支持する', hint:'進捗+20 スコア+20', effect: s=>{ s.progress+=20; s.score+=20; addLog('雰囲気が一気に前向きに！','progress'); }},
+      { label:'「もう少し詳しく」と深掘りする', hint:'進捗+10 発言権-10', effect: s=>{ s.progress+=10; s.speakGauge=Math.max(0,s.speakGauge-10); addLog('深掘りしてさらに前進','progress'); }},
+      { label:'「でも…」と否定する', hint:'機嫌-10 進捗-5', effect: s=>{ s.mood=Math.max(0,s.mood-10); s.progress=Math.max(0,s.progress-5); addLog('空気が悪くなった…','derail'); }},
+    ]},
+  { tag:'chance', title:'☕ コーヒーブレイク',
+    desc:'「5分休憩しましょう」という声が上がった。',
+    choices:[
+      { label:'「賛成！」と休憩する', hint:'機嫌+20 発言権+20', effect: s=>{ s.mood=Math.min(100,s.mood+20); s.speakGauge=Math.min(100,s.speakGauge+20); addLog('リフレッシュ！機嫌・発言権UP','event'); }},
+      { label:'「まだ続けましょう」と押す', hint:'進捗+10 機嫌-10', effect: s=>{ s.progress+=10; s.mood=Math.max(0,s.mood-10); addLog('頑張ったが疲弊感が…','system'); }},
+    ]},
+  { tag:'chance', title:'📊 データが決め手に',
+    desc:'「このデータを見てください」と誰かが有力な数字を出した。',
+    choices:[
+      { label:'データを採用する', hint:'進捗+25 スコア+15', effect: s=>{ s.progress+=25; s.score+=15; addLog('データで議論が一気に決まった！','progress'); }},
+      { label:'「出典は？」と確認する', hint:'スコア+20 進捗+10', effect: s=>{ s.score+=20; s.progress+=10; addLog('慎重な対応。評価UP','progress'); }},
+    ]},
+  { tag:'chance', title:'🤝 合意の瞬間',
+    desc:'対立していた二人が突然「それでいいですよ」と言い始めた。',
+    choices:[
+      { label:'すぐ議事録に記録する', hint:'進捗+30 スコア+25', effect: s=>{ s.progress+=30; s.score+=25; addLog('即記録！決定事項が確定した！','progress'); }},
+      { label:'「本当にいいですか？」と確認', hint:'進捗+15', effect: s=>{ s.progress+=15; addLog('念押しして確認した。進捗+15','progress'); }},
+    ]},
+  // ── CRISIS（危機系）
+  { tag:'crisis', title:'💀 上司が立ち上がった',
+    desc:'上司が突然立ち上がり「この会議、意味あるの？」と言った。',
+    choices:[
+      { label:'「意義を説明します」と冷静に', hint:'機嫌+15 スコア+20', effect: s=>{ s.mood+=15; s.score+=20; addLog('堂々と反論！評価UP','progress'); }},
+      { label:'「申し訳ありません」と謝る', hint:'機嫌+5', effect: s=>{ s.mood+=5; addLog('謝罪で一応収まった','system'); }},
+      { label:'「私も思ってました」と同調', hint:'機嫌-30 スコア-20', effect: s=>{ s.mood=Math.max(0,s.mood-30); s.score=Math.max(0,s.score-20); addLog('最悪の一手…スコア激減','derail'); }},
+    ]},
+  { tag:'crisis', title:'🔥 意見が真っ二つ',
+    desc:'参加者が二派に分かれて激しく対立し始めた。',
+    choices:[
+      { label:'仲裁に入る', hint:'スコア+30 機嫌+10', effect: s=>{ s.score+=30; s.mood+=10; addLog('見事な仲裁！スコア+30','progress'); }},
+      { label:'どちらかの味方をする', hint:'機嫌-20 進捗-15', effect: s=>{ s.mood=Math.max(0,s.mood-20); s.progress=Math.max(0,s.progress-15); addLog('派閥争いに発展した…','derail'); }},
+      { label:'「投票で決めましょう」と提案', hint:'進捗+15 スコア+10', effect: s=>{ s.progress+=15; s.score+=10; addLog('多数決で決着！','progress'); }},
+    ]},
+  { tag:'crisis', title:'📞 緊急電話',
+    desc:'「取引先から急ぎで連絡があります」と秘書が飛び込んできた。',
+    choices:[
+      { label:'「後で折り返す」と続行', hint:'進捗+10', effect: s=>{ s.progress+=10; addLog('会議を優先した。進捗+10','progress'); }},
+      { label:'「5分対応します」と中断', hint:'時間-60秒 スコア+15', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-60); s.score+=15; addLog('素早く対応してスコアUP','event'); }},
+      { label:'「部長に代わってもらう」', hint:'機嫌-5 時間-30秒', effect: s=>{ s.mood=Math.max(0,s.mood-5); s.timeLeft=Math.max(0,s.timeLeft-30); addLog('部長が対応した','system'); }},
+    ]},
+  { tag:'crisis', title:'🤢 参加者が体調不良',
+    desc:'「ちょっと気分が悪くて…」と一人が顔色を変えた。',
+    choices:[
+      { label:'「すぐ休んでください」と気遣う', hint:'機嫌+15 スコア+10', effect: s=>{ s.mood+=15; s.score+=10; addLog('人間的な対応で評価UP','event'); }},
+      { label:'「もう少し頑張れますか？」と続行', hint:'機嫌-25', effect: s=>{ s.mood=Math.max(0,s.mood-25); addLog('最悪の対応…機嫌-25','derail'); }},
+    ]},
+  { tag:'crisis', title:'💣 「そもそも論」が出た',
+    desc:'「そもそもこの会議の目的って何でしたっけ？」と聞かれた。',
+    choices:[
+      { label:'「目的はXXです」と即答', hint:'スコア+25 進捗+10', effect: s=>{ s.score+=25; s.progress+=10; addLog('明確に答えた！リーダーシップ評価','progress'); }},
+      { label:'「確かに…」と考え込む', hint:'進捗-20 時間-60秒', effect: s=>{ s.progress=Math.max(0,s.progress-20); s.timeLeft=Math.max(0,s.timeLeft-60); addLog('そもそも論に巻き込まれた…','derail'); }},
+      { label:'「アジェンダに書いてあります」', hint:'機嫌-10 スコア+10', effect: s=>{ s.mood=Math.max(0,s.mood-10); s.score+=10; addLog('正論だが空気が悪くなった','system'); }},
+    ]},
+  // ── NORMAL（通常系）
+  { tag:'normal', title:'🗣️ 自分の番が来た',
+    desc:'「〇〇さん、どう思いますか？」と振られた。',
+    choices:[
+      { label:'「賛成です。理由はXXです」', hint:'進捗+15 発言権-15', effect: s=>{ s.progress+=15; s.speakGauge=Math.max(0,s.speakGauge-15); addLog('明確な発言で進捗UP','progress'); }},
+      { label:'「少し考えさせてください」', hint:'発言権+5', effect: s=>{ s.speakGauge=Math.min(100,s.speakGauge+5); addLog('時間稼ぎ','system'); }},
+      { label:'「すでに発言した通りです」', hint:'スコア+10 機嫌-5', effect: s=>{ s.score+=10; s.mood=Math.max(0,s.mood-5); addLog('スマートだが少し空気が冷えた','system'); }},
+    ]},
+  { tag:'normal', title:'📝 議事録の確認',
+    desc:'「今の決定事項をまとめると…」と議事録担当が読み上げ始めた。',
+    choices:[
+      { label:'「正確です」と確認', hint:'進捗+10 スコア+10', effect: s=>{ s.progress+=10; s.score+=10; addLog('正確な議事録で信頼UP','progress'); }},
+      { label:'「一点修正を」と訂正する', hint:'スコア+20', effect: s=>{ s.score+=20; addLog('細部まで確認した。スコア+20','event'); }},
+      { label:'「大体合ってます」とスルー', hint:'スコア-5', effect: s=>{ s.score=Math.max(0,s.score-5); addLog('曖昧な確認になってしまった','system'); }},
+    ]},
+  { tag:'normal', title:'🔄 話が戻った',
+    desc:'「さっきの件に戻りますが…」と既に決まった話を蒸し返された。',
+    choices:[
+      { label:'「それは決まりました」とはっきり言う', hint:'スコア+15 機嫌-5', effect: s=>{ s.score+=15; s.mood=Math.max(0,s.mood-5); addLog('毅然と言い切った','progress'); }},
+      { label:'また議論する', hint:'進捗-10 時間-30秒', effect: s=>{ s.progress=Math.max(0,s.progress-10); s.timeLeft=Math.max(0,s.timeLeft-30); addLog('また同じ話に…','derail'); }},
+    ]},
+  { tag:'normal', title:'💡 新しいアイデア',
+    desc:'「別の案があるんですが…」と急に新提案が出てきた。',
+    choices:[
+      { label:'「次回にしましょう」と先送り', hint:'進捗+5', effect: s=>{ s.progress+=5; addLog('上手く先送りにした','system'); }},
+      { label:'「今聞きましょう」と採用', hint:'進捗-10 スコア+10', effect: s=>{ s.progress=Math.max(0,s.progress-10); s.score+=10; addLog('良いアイデアだったが議論が増えた','event'); }},
+    ]},
+  { tag:'normal', title:'⏱ 「時間大丈夫？」',
+    desc:'「あと何分ありましたっけ？」と全員が時計を見た。',
+    choices:[
+      { label:'「急いで決めましょう」と煽る', hint:'進捗+20 機嫌-5', effect: s=>{ s.progress+=20; s.mood=Math.max(0,s.mood-5); addLog('焦りで加速！進捗+20','progress'); }},
+      { label:'「大丈夫です、落ち着いて」', hint:'機嫌+10', effect: s=>{ s.mood+=10; addLog('場を落ち着かせた','event'); }},
+    ]},
+  // ── NEW CHAOS（カオス系5種）
+  { tag:'crisis', title:'👽 宇宙人が会議に乱入した',
+    desc:'ドアを蹴破って宇宙人が入ってきた。「この会議の目的を説明しろ」と言っている。',
+    choices:[
+      { label:'「地球代表として交渉する」', hint:'進捗+35 スコア+40', effect: s=>{ s.progress=Math.min(100,s.progress+35); s.score+=40; addLog('👽 宇宙人と握手！会議が加速した','progress'); }},
+      { label:'「会議に参加させる」', hint:'50%で神進捗/全リセット', effect: s=>{ if(Math.random()<0.5){s.progress=Math.min(100,s.progress+60);addLog('👽 宇宙人の判断力が会議を一気に前進させた！','event');}else{s.progress=0;s.mood=Math.max(0,s.mood-30);addLog('👽 宇宙人が議題を全部否定…進捗リセット','derail');} }},
+      { label:'「無視して続ける」', hint:'現議題リセット 機嫌-20', effect: s=>{ s.progress=0; s.mood=Math.max(0,s.mood-20); addLog('👽 激怒した宇宙人が議題を破壊した','derail'); }},
+    ]},
+  { tag:'crisis', title:'💃 上司が突然踊り始めた',
+    desc:'静寂を切り裂いて部長が立ち上がり、なぜかディスコダンスを始めた。',
+    choices:[
+      { label:'止める（恥ずかしいので）', hint:'機嫌+10 時間-20秒', effect: s=>{ s.mood=Math.min(100,s.mood+10); s.timeLeft=Math.max(0,s.timeLeft-20); addLog('💃 部長は渋々座った。でも空気が和んだ','event'); }},
+      { label:'一緒に踊る', hint:'機嫌+25 スコア+30 発言権+25', effect: s=>{ s.mood=Math.min(100,s.mood+25); s.score+=30; s.speakGauge=Math.min(100,s.speakGauge+25); addLog('💃 全員が踊り出した！謎のチームワークが生まれた','event'); }},
+      { label:'「議事録に記録します」と言う', hint:'スコア+50 機嫌-35', effect: s=>{ s.score+=50; s.mood=Math.max(0,s.mood-35); addLog('💃 録画がSNSで拡散。スコアは上がったが部長激怒','derail'); }},
+    ]},
+  { tag:'crisis', title:'🔴 会議室が火星に転送された',
+    desc:'窓の外が赤い砂漠になっている。誰も驚いていないのがさらに怖い。',
+    choices:[
+      { label:'「環境が変わっても会議は続行」', hint:'進捗+25 スコア+30', effect: s=>{ s.progress=Math.min(100,s.progress+25); s.score+=30; addLog('🔴 プロ意識で会議続行。進捗+25','progress'); }},
+      { label:'「地球に戻る方法を探す」', hint:'時間-120秒', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-120); addLog('🔴 地球への帰還方法を2分間議論した。結局わからなかった','derail'); }},
+      { label:'「火星でビジネス展開しよう」と提案', hint:'スコア+100 機嫌-40 時間-60秒', effect: s=>{ s.score+=100; s.mood=Math.max(0,s.mood-40); s.timeLeft=Math.max(0,s.timeLeft-60); addLog('🔴 火星事業計画が始まった。スコア爆上がりだが混乱','event'); }},
+    ]},
+  { tag:'danger', title:'📊 パワポが生き物になって逃げ出した',
+    desc:'スクリーン上のグラフが動き出し、窓から脱出しようとしている。60ページ分が。',
+    choices:[
+      { label:'追いかけて捕まえる', hint:'進捗+15 時間-30秒', effect: s=>{ s.progress=Math.min(100,s.progress+15); s.timeLeft=Math.max(0,s.timeLeft-30); addLog('📊 全ページ回収成功！30秒かかったが無事だった','progress'); }},
+      { label:'新しいパワポを即席で作る', hint:'時間-90秒 スコア+25', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-90); s.score+=25; addLog('📊 90秒で新資料を作った。評価された','event'); }},
+      { label:'「口頭で説明できます」と強がる', hint:'発言権-35 進捗+10', effect: s=>{ s.speakGauge=Math.max(0,s.speakGauge-35); s.progress=Math.min(100,s.progress+10); addLog('📊 口頭説明で発言権を大量消費した','derail'); }},
+    ]},
+  { tag:'crisis', title:'🌐 全員が急に別の言語を話し始めた',
+    desc:'参加者全員が突然それぞれ別の言語で話し始めた。日本語を話しているのは自分だけ。',
+    choices:[
+      { label:'ジェスチャーと図で続行', hint:'進捗+15 スコア+20', effect: s=>{ s.progress=Math.min(100,s.progress+15); s.score+=20; addLog('🌐 非言語コミュニケーションで意外と進んだ','progress'); }},
+      { label:'翻訳アプリを総動員する', hint:'時間-60秒 進捗+20', effect: s=>{ s.timeLeft=Math.max(0,s.timeLeft-60); s.progress=Math.min(100,s.progress+20); addLog('🌐 翻訳に1分かかったが議論が再開できた','event'); }},
+      { label:'自分も謎の言語で喋り始める', hint:'謎の効果', effect: s=>{ const r=Math.random(); if(r<0.33){s.mood=Math.min(100,s.mood+30);addLog('🌐 謎の言語が共鳴した。機嫌が爆上がり','event');}else if(r<0.66){s.progress=Math.min(100,s.progress+40);addLog('🌐 謎の言語で議題が一瞬で決まった。なぜ？','progress');}else{s.mood=Math.max(0,s.mood-30);addLog('🌐 誰も理解できず会議が崩壊した','derail');} }},
+    ]},
+];
+
+// 実績定義
+const ACHIEVEMENTS_DEF = [
+  { id:'first',    name:'初回会議',       check: s => s.totalGames >= 1 },
+  { id:'perfect',  name:'完全決着',       check: s => s.lastDone >= 5 },
+  { id:'speedrun', name:'スピードラン',   check: s => s.lastDone >= 5 && s.lastTime >= 900 },
+  { id:'survivor', name:'九死に一生',     check: s => s.lastMood <= 5 && s.lastDone >= 1 },
+  { id:'derail10', name:'脱線マスター',   check: s => s.totalDerail >= 10 },
+  { id:'score500', name:'ハイスコアラー', check: s => s.lastScore >= 500 },
+  { id:'noderail', name:'鉄壁進行',       check: s => s.lastDerail === 0 && s.lastDone >= 3 },
+  { id:'chaos',    name:'カオスクリア',   check: s => s.lastSet === 'chaos' && s.lastDone >= 3 },
+  { id:'play5',    name:'会議中毒',       check: s => s.totalGames >= 5 },
+  { id:'allchar',  name:'全員集合',       check: s => s.charsSeen && s.charsSeen.length >= 6 },
+];
+
+// ============================================================
+// 状態
+// ============================================================
+let state = {};
+let selectedChars = [];
+let selectedSet = null;
+let gameInterval = null;
+let eventTimeout = null;
+let nextEventIn = 0;
+let save = JSON.parse(localStorage.getItem('kaigiMax') || '{}');
+save.totalGames = save.totalGames || 0;
+save.totalDerail = save.totalDerail || 0;
+save.achievements = save.achievements || {};
+save.charsSeen = save.charsSeen || [];
+
+function persist() { localStorage.setItem('kaigiMax', JSON.stringify(save)); }
+
+// ============================================================
+// SETUP
+// ============================================================
+function initSetup() {
+  selectedChars = []; selectedSet = null;
+  const cg = document.getElementById('charGrid');
+  cg.innerHTML = '';
+  CHARS.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'char-card';
+    el.innerHTML = `<div class="ce">${c.e}</div><div class="cn">${c.name}</div><div class="cd">${c.desc}</div><div class="cs">✦ ${c.skill}</div>`;
+    el.addEventListener('click', () => {
+      const i = selectedChars.indexOf(c.id);
+      if (i >= 0) { selectedChars.splice(i,1); el.classList.remove('selected'); }
+      else if (selectedChars.length < 4) { selectedChars.push(c.id); el.classList.add('selected'); }
+      else showAch('最大4人まで選べます');
+    });
+    cg.appendChild(el);
+  });
+  const al = document.getElementById('agendaList');
+  al.innerHTML = '';
+  AGENDA_SETS.forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'agenda-row';
+    el.innerHTML = `<div><div style="font-weight:bold">${a.name}</div><div style="font-size:0.75em;color:#888">${a.desc}</div></div><div class="ar diff-stars">${a.diff}</div>`;
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.agenda-row').forEach(e => e.classList.remove('selected'));
+      selectedSet = a; el.classList.add('selected');
+    });
+    al.appendChild(el);
+  });
+}
+
+document.getElementById('toSetupBtn').addEventListener('click', () => {
+  show('setupScreen'); initSetup();
+});
+document.getElementById('toAchBtn').addEventListener('click', () => {
+  // 簡易実績表示（resultScreenを流用）
+  showResult(true);
+});
+document.getElementById('goBtn').addEventListener('click', () => {
+  if (selectedChars.length < 2) return showAch('参加者を2人以上選んでください');
+  if (!selectedSet) return showAch('議題セットを選んでください');
+  startGame();
+});
+
+// ============================================================
+// GAME START
+// ============================================================
+function startGame() {
+  show('gameScreen');
+  document.getElementById('log').innerHTML = '';
+
+  state = {
+    timeLeft: 20 * 60,
+    mood: 80,
+    speakGauge: 70,
+    progress: 0,
+    score: 0,
+    derailCount: 0,
+    doneCount: 0,
+    cost: 0,
+    chars: selectedChars.map(id => CHARS.find(c => c.id === id)),
+    agendas: [...selectedSet.agendas],
+    currentAgendaIdx: 0,
+    isDerailing: false,
+    storyFlags: {},
+    setId: selectedSet.id,
+    comboCount: 0,
+  };
+
+  // 参加者表示
+  const pArea = document.getElementById('participants');
+  pArea.innerHTML = '';
+  state.chars.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'ptag'; el.id = 'ptag_' + c.id;
+    el.textContent = c.e + ' ' + c.name;
+    pArea.appendChild(el);
+  });
+
+  // 実績：キャラ記録
+  selectedChars.forEach(id => { if (!save.charsSeen.includes(id)) save.charsSeen.push(id); });
+  persist();
+
+  setCurrentAgenda();
+  resetEmergencyBtn();
+  gameInterval = setInterval(gameTick, 1000);
+  scheduleNextEvent();
+  updateGameUI();
+}
+
+function setCurrentAgenda() {
+  const name = state.agendas[state.currentAgendaIdx] || '---';
+  document.getElementById('asName').textContent = '📋 ' + name;
+  document.getElementById('asNum').textContent = `議題 ${state.currentAgendaIdx+1}/${state.agendas.length}`;
+  state.progress = 0;
+  addLog(`--- 議題「${name}」開始 ---`, 'event');
+}
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+function gameTick() {
+  state.timeLeft--;
+  state.cost += 15;
+  nextEventIn--;
+
+  if (state.timeLeft <= 0) { playFail(); endGame('timeout'); return; }
+  if (state.mood <= 0) { playFail(); endGame('mood'); return; }
+  document.getElementById('gtTime').classList.toggle('low', state.timeLeft < 180);
+
+  // 発言権自然回復
+  state.speakGauge = Math.min(100, state.speakGauge + 1);
+
+  // 自動進捗（大幅削減 — プレイヤー操作が主要な進捗手段）
+  const baseSpeed = selectedSet?.id === 'chaos' ? 0.08 : selectedSet?.id === 'hard' ? 0.15 : 0.25;
+  if (Math.random() < 0.2) {
+    state.progress = Math.min(100, state.progress + baseSpeed);
+  }
+
+  updateGameUI();
+}
+
+// 難易度・残り時間・ムードで動的にインターバルを計算
+function getEventInterval() {
+  const id = selectedSet?.id ?? 'standard';
+  let [mn, mx] = id === 'chaos' ? [2,5] : id === 'hard' ? [3,7] : [5,9];
+  // 残り時間が少ないほど短縮（ラスト2分は最大-3秒）
+  if      (state.timeLeft < 120) { mn -= 2; mx -= 3; }
+  else if (state.timeLeft < 300) { mn -= 1; mx -= 2; }
+  else if (state.timeLeft < 600) {          mx -= 1; }
+  // 機嫌低下でパニック加速
+  if (state.mood < 30) { mn -= 1; mx -= 1; }
+  return [Math.max(2, mn), Math.max(3, mx)];
+}
+
+function getEventTimerDuration() {
+  return 5; // 常時5秒固定
+}
+
+function scheduleNextEvent() {
+  const [minWait, maxWait] = getEventInterval();
+  const wait = minWait + Math.floor(Math.random() * (maxWait - minWait + 1));
+  nextEventIn = wait;
+  let remaining = wait;
+  const area = document.getElementById('eventArea');
+
+  // カウントダウンバー付き待機表示
+  area.innerHTML = `
+    <span class="emergency-badge${state.mood < 30 ? ' show' : ''}" id="emergencyBadge">🔥 緊急会議モード</span>
+    <div class="ev-next-wrap">
+      <div class="ev-next-txt" id="evNextTxt">⏳ 次のイベントまで <b>${remaining}</b>秒…</div>
+      <div class="ev-next-bar-wrap"><div class="ev-next-bar" id="evNextBar"></div></div>
+    </div>
+  `;
+
+  const countdown = setInterval(() => {
+    remaining--;
+    if (remaining <= 0 || !gameInterval) { clearInterval(countdown); return; }
+    const txt = document.getElementById('evNextTxt');
+    const bar = document.getElementById('evNextBar');
+    const badge = document.getElementById('emergencyBadge');
+    if (badge) badge.classList.toggle('show', state.mood < 30);
+    if (txt) {
+      const icon = remaining <= 2 ? '🔥' : remaining <= 4 ? '⚡' : '⏳';
+      txt.innerHTML = `${icon} 次のイベントまで <b>${remaining}</b>秒…`;
+      txt.style.color = remaining <= 2 ? '#e74c3c' : remaining <= 4 ? '#f39c12' : '#555';
+    }
+    if (bar) {
+      bar.style.width = ((remaining / wait) * 100) + '%';
+      bar.style.background = remaining <= 2 ? '#e74c3c' : remaining <= 4 ? '#f39c12' : '#ffd166';
+    }
+  }, 1000);
+
+  eventTimeout = setTimeout(() => {
+    clearInterval(countdown);
+    if (gameInterval) triggerEvent();
+  }, wait * 1000);
+}
+
+function triggerEvent() {
+  const pool = [...ALL_EVENTS];
+  const ev = pool[Math.floor(Math.random() * pool.length)];
+  const evCopy = { ...ev, choices: [...ev.choices.map(c => ({...c}))] };
+  state.chars.forEach(c => { if (c.onEvent) c.onEvent(evCopy); });
+  playEventSound(ev.tag);
+  showEventCard(evCopy);
+}
+
+let timerInterval = null;
+function showEventCard(ev) {
+  const area = document.getElementById('eventArea');
+  let timeLeft = getEventTimerDuration();
+
+  const tagColors = { danger:'danger', chance:'chance', crisis:'crisis', normal:'normal' };
+  const tagLabels = { danger:'⚡ 脱線', chance:'✨ チャンス', crisis:'💀 危機', normal:'📋 通常' };
+
+  area.innerHTML = `
+    <div class="ev-timer" id="evTimer">${timeLeft}</div>
+    <div class="ev-tag ${tagColors[ev.tag]}">${tagLabels[ev.tag]}</div>
+    <div class="ev-title">${ev.title}</div>
+    <div class="ev-desc">${ev.desc}</div>
+    <div class="ev-choices" id="evChoices"></div>
+  `;
+
+  const choicesEl = document.getElementById('evChoices');
+  const nums = ['①','②','③','④'];
+  ev.choices.forEach((ch, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'ev-btn';
+    const hintClass = (ch.hint.includes('+') && !ch.hint.includes('-')) ? 'good'
+                    : (!ch.hint.includes('+') && ch.hint.includes('-')) ? 'bad' : '';
+    btn.innerHTML = `<span class="ch-num">${nums[idx]}</span><span style="flex:1">${ch.label}</span><span class="hint ${hintClass}">${ch.hint}</span>`;
+    btn.addEventListener('click', () => {
+      if (timerInterval) clearInterval(timerInterval);
+      playKClick(600, 0.08);
+      ch.effect(state);
+
+      // 脱線カウント
+      if (ev.tag === 'danger' || ev.tag === 'crisis') {
+        state.derailCount++;
+        save.totalDerail++;
+      }
+
+      // 議題進捗確認
+      if (state.progress >= 100) {
+        state.progress = 100;
+        state.doneCount++;
+        state.score += 120;
+        state.storyFlags['done_' + state.currentAgendaIdx] = true;
+        addLog(`🎉「${state.agendas[state.currentAgendaIdx]}」決定！スコア+120`, 'event');
+        playSuccess();
+        // フラッシュ演出
+        const as = document.querySelector('.agenda-status');
+        if (as) { as.classList.add('agenda-done-flash'); setTimeout(() => as.classList.remove('agenda-done-flash'), 700); }
+        state.currentAgendaIdx++;
+        if (state.currentAgendaIdx >= state.agendas.length) {
+          endGame('clear'); return;
+        }
+        setCurrentAgenda();
+      }
+
+      updateGameUI();
+      // コンボイベント判定（難易度・残り時間で確率UP）
+      const baseCombo = { chaos: 0.52, hard: 0.34, standard: 0.22 }[selectedSet?.id] ?? 0.22;
+      const comboRate = Math.min(0.75, baseCombo + (state.timeLeft < 300 ? 0.15 : 0));
+      if (Math.random() < comboRate && state.mood > 0 && state.timeLeft > 0) {
+        state.comboCount++;
+        area.innerHTML = `
+          <span class="emergency-badge${state.mood < 30 ? ' show' : ''}" id="emergencyBadge">🔥 緊急会議モード</span>
+          <div class="ev-combo-wrap">
+            <div class="ev-next-txt" style="color:#ffd166">
+              ⚡ 連続イベント発生！${state.comboCount >= 2 ? ` <span style="color:#e74c3c">(${state.comboCount}連続！！)</span>` : ''}
+            </div>
+          </div>`;
+        setTimeout(() => { if (gameInterval) triggerEvent(); }, 850);
+      } else {
+        state.comboCount = 0;
+        scheduleNextEvent();
+      }
+    });
+    choicesEl.appendChild(btn);
+  });
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    const timerEl = document.getElementById('evTimer');
+    if (timerEl) {
+      timerEl.textContent = timeLeft;
+      timerEl.classList.remove('warning', 'urgent');
+      if      (timeLeft <= 3) timerEl.classList.add('urgent');
+      else if (timeLeft <= 5) timerEl.classList.add('warning');
+    }
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      // 時間切れ→最悪の選択肢を自動実行
+      const worst = ev.choices[ev.choices.length - 1];
+      worst.effect(state);
+      state.mood = Math.max(0, state.mood - 10);
+      state.mood = Math.max(0, state.mood - 10); // タイムアウト追加ペナルティ
+      addLog('⏱ 判断遅すぎ！機嫌-20（合計）', 'derail');
+      if (state.mood <= 0) { endGame('mood'); return; }
+      updateGameUI();
+      // タイムアウト時は高確率で追い打ち
+      const timeoutCombo = { chaos: 0.85, hard: 0.6, standard: 0.4 }[selectedSet?.id] ?? 0.4;
+      if (Math.random() < timeoutCombo && state.timeLeft > 0) {
+        area.innerHTML = `
+          <span class="emergency-badge show" id="emergencyBadge">🔥 緊急会議モード</span>
+          <div class="ev-combo-wrap">
+            <div class="ev-next-txt" style="color:#e74c3c">⏱ 追い打ちイベント発生！！</div>
+          </div>`;
+        setTimeout(() => { if (gameInterval) triggerEvent(); }, 750);
+      } else {
+        state.comboCount = 0;
+        scheduleNextEvent();
+      }
+    }
+  }, 1000);
+}
+
+// ============================================================
+// UI更新
+// ============================================================
+function addLog(text, type = 'system') {
+  const log = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + type;
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateGameUI() {
+  // 時間
+  const m = Math.floor(state.timeLeft/60), s = state.timeLeft%60;
+  document.getElementById('gtTime').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+
+  // 機嫌
+  const moodEmojis = [[80,'😊'],[60,'😐'],[40,'😑'],[20,'😠'],[0,'😡']];
+  const me = moodEmojis.find(([t]) => state.mood >= t)?.[1] ?? '😡';
+  document.getElementById('gtMood').textContent = `${me} ${Math.floor(state.mood)}`;
+  const bm = document.getElementById('barMood');
+  bm.style.width = state.mood + '%';
+  bm.classList.toggle('danger', state.mood < 30);
+
+  // 発言権
+  document.getElementById('gtSpeak').textContent = Math.floor(state.speakGauge);
+  const bs = document.getElementById('barSpeak');
+  bs.style.width = state.speakGauge + '%';
+  bs.classList.toggle('danger', state.speakGauge < 20);
+
+  // 進捗
+  const bp = document.getElementById('barProg');
+  bp.style.width = Math.min(100, state.progress) + '%';
+  document.getElementById('progPct').textContent = Math.floor(state.progress) + '%';
+  document.getElementById('asStatus').textContent =
+    state.isDerailing ? '⚠️ 脱線中' :
+    state.progress > 70 ? '🔥 ゴール間近！' :
+    state.progress > 40 ? '📈 議論が進んでいます' : '💬 議論中…';
+
+  // 緊急モードバッジ同期（カウントダウン中のバッジ）
+  const badge = document.getElementById('emergencyBadge');
+  if (badge) badge.classList.toggle('show', state.mood < 30);
+
+  // スタッツ
+  document.getElementById('stDerail').textContent = state.derailCount;
+  document.getElementById('stDone').textContent = state.doneCount;
+  document.getElementById('stScore').textContent = state.score;
+  document.getElementById('stCost').textContent = '¥' + state.cost.toLocaleString();
+}
+
+// ============================================================
+// END GAME
+// ============================================================
+function endGame(reason) {
+  if (timerInterval) clearInterval(timerInterval);
+  if (gameInterval) { clearInterval(gameInterval); gameInterval = null; }
+  if (eventTimeout) clearTimeout(eventTimeout);
+  if (emergencyCdTimer) clearInterval(emergencyCdTimer);
+
+  save.totalGames++;
+  save.lastDone = state.doneCount;
+  save.lastScore = state.score;
+  save.lastMood = state.mood;
+  save.lastDerail = state.derailCount;
+  save.lastTime = state.timeLeft;
+  save.lastSet = state.setId;
+  persist();
+
+  // 実績チェック
+  const newAch = [];
+  ACHIEVEMENTS_DEF.forEach(a => {
+    if (!save.achievements[a.id] && a.check(save)) {
+      save.achievements[a.id] = true;
+      newAch.push(a.name);
+    }
+  });
+  persist();
+  if (newAch.length) {
+    newAch.forEach((n, i) => setTimeout(() => showAch('🏆 実績解除：' + n), i * 2500));
+  }
+
+  showResult(false, reason);
+}
+
+function showResult(achOnly = false, reason = '') {
+  show('resultScreen');
+  if (timerInterval) clearInterval(timerInterval);
+
+  // エンディング分岐
+  let ending = '', storyText = '';
+  if (achOnly) {
+    ending = '🏆 実績一覧';
+    document.getElementById('resRank').textContent = '';
+    document.getElementById('resTitle').textContent = '';
+    document.getElementById('resGrid').innerHTML = '';
+    document.getElementById('resStory').textContent = '';
+  } else {
+    const done = state?.doneCount ?? 0;
+    const score = state?.score ?? 0;
+    const total = state?.agendas?.length ?? 5;
+
+    if (reason === 'clear') {
+      ending = '✅ 全議題クリア';
+      storyText = '全ての議題が決まった。会議室を出ると、廊下に夕日が差し込んでいた。「お疲れ様でした」——その一言が、今日一番の名言だった。';
+    } else if (reason === 'mood') {
+      ending = '😡 上司激怒エンド';
+      storyText = '上司が会議室を出ていった。残された沈黙の中、誰かがボソリと「…また明日やり直しですね」と言った。明日も同じ会議が待っている。';
+    } else {
+      if (done >= total * 0.6) {
+        ending = '⏱ 時間切れ（健闘）';
+        storyText = '時間切れになったが、半分以上は決まった。「残りは次回に」——日本の会議の伝統は今日も受け継がれた。';
+      } else {
+        ending = '⏱ 時間切れ（惨敗）';
+        storyText = '気づけば時間が来ていた。何も決まらないまま、参加者は次の予定へと消えていった。この会議の議事録は永久に「継続審議」と記される。';
+      }
+    }
+
+    const ranks = [
+      {min:500,r:'S',t:'伝説の進行役'},{min:350,r:'A',t:'できるビジネスマン'},
+      {min:200,r:'B',t:'まあまあの会議'},{min:100,r:'C',t:'ギリ及第点'},{min:0,r:'F',t:'何も決まらなかった'},
+    ];
+    const {r,t} = ranks.find(x => score >= x.min);
+    document.getElementById('resRank').textContent = r;
+    document.getElementById('resTitle').textContent = t;
+    document.getElementById('resEnding').textContent = ending;
+    document.getElementById('resStory').textContent = storyText;
+
+    const statsData = [
+      ['スコア', score + ' pt'],['議題完了', done + '/' + total],
+      ['脱線回数', state.derailCount + ' 回'],['会議コスト', '¥' + state.cost?.toLocaleString()],
+      ['上司機嫌', Math.floor(state.mood) + '%'],['残り時間', `${Math.floor(state.timeLeft/60)}:${(state.timeLeft%60).toString().padStart(2,'0')}`],
+    ];
+    document.getElementById('resGrid').innerHTML = statsData.map(([l,v]) =>
+      `<div class="rg-cell"><div class="rg-label">${l}</div><div class="rg-val">${v}</div></div>`
+    ).join('');
+  }
+
+  // 実績表示
+  const achEl = document.getElementById('resAch');
+  achEl.innerHTML = ACHIEVEMENTS_DEF.map(a =>
+    `<div class="ach-badge ${save.achievements[a.id] ? 'unlocked' : ''}">${save.achievements[a.id] ? '🏅' : '🔒'} ${a.name}</div>`
+  ).join('');
+}
+
+document.getElementById('retryBtn').addEventListener('click', () => {
+  // 全画面タイトルオーバーレイを再表示
+  const ts = document.getElementById('titleScreen');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  ts.style.display = 'flex';
+  ts.style.opacity = '0';
+  ts.style.transition = 'opacity 0.4s';
+  requestAnimationFrame(() => requestAnimationFrame(() => { ts.style.opacity = '1'; }));
+});
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showAch(msg) {
+  const p = document.getElementById('achPopup');
+  document.getElementById('achPopupText').textContent = msg;
+  p.classList.add('show');
+  setTimeout(() => p.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// 効果音
+// ============================================================
+let kACtx = null;
+function kGetCtx() {
+  if (!kACtx) kACtx = new (window.AudioContext || window.webkitAudioContext)();
+  return kACtx;
+}
+function playKClick(freq = 500, dur = 0.1) {
+  try {
+    const ctx = kGetCtx();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.07, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur + 0.02);
+  } catch(e) {}
+}
+function playEventSound(tag) {
+  try {
+    const ctx = kGetCtx();
+    const freqs = { danger:[200,150], chance:[400,600,800], crisis:[100,80], normal:[440] };
+    (freqs[tag]||freqs.normal).forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type = tag==='chance'?'triangle':'sawtooth';
+      o.frequency.value=f;
+      g.gain.setValueAtTime(0.05,ctx.currentTime+i*0.1);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.1+0.18);
+      o.connect(g);g.connect(ctx.destination);
+      o.start(ctx.currentTime+i*0.1);
+      o.stop(ctx.currentTime+i*0.1+0.2);
+    });
+  } catch(e) {}
+}
+function playSuccess() {
+  try {
+    const ctx = kGetCtx();
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.07, ctx.currentTime + i * 0.1);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.22);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.1);
+      o.stop(ctx.currentTime + i * 0.1 + 0.25);
+    });
+  } catch(e) {}
+}
+function playFail() {
+  try {
+    const ctx = kGetCtx();
+    [320, 260, 200].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.06, ctx.currentTime + i * 0.13);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.13 + 0.22);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.13);
+      o.stop(ctx.currentTime + i * 0.13 + 0.26);
+    });
+  } catch(e) {}
+}
+
+// ============================================================
+// 緊急ボタン
+// ============================================================
+let emergencyCooldown = 0;
+let emergencyCdTimer = null;
+
+document.getElementById('emergencyBtn').addEventListener('click', function() {
+  if (!gameInterval || emergencyCooldown > 0) return;
+  if (state.mood <= 0 || state.timeLeft <= 0) return;
+
+  playKClick(300, 0.15);
+  this.disabled = true;
+  emergencyCooldown = 20;
+
+  if (Math.random() < 0.5) {
+    // 成功
+    state.progress = Math.min(100, state.progress + 30);
+    state.score += 20;
+    addLog('🚨 緊急ボタン発動！進捗+30！勝負に出た！', 'progress');
+    playSuccess();
+    if (state.progress >= 100) {
+      state.doneCount++;
+      state.score += 120;
+      state.storyFlags['done_' + state.currentAgendaIdx] = true;
+      addLog(`🎉「${state.agendas[state.currentAgendaIdx]}」緊急決着！スコア+120`, 'event');
+      const as = document.querySelector('.agenda-status');
+      if (as) { as.classList.add('agenda-done-flash'); setTimeout(() => as.classList.remove('agenda-done-flash'), 700); }
+      state.currentAgendaIdx++;
+      if (state.currentAgendaIdx >= state.agendas.length) { endGame('clear'); return; }
+      setCurrentAgenda();
+    }
+  } else {
+    // 爆発
+    state.mood   = Math.max(0, state.mood   - 30);
+    state.progress = Math.max(0, state.progress - 20);
+    state.score  = Math.max(0, state.score  - 50);
+    addLog('🚨 緊急ボタンが爆発！機嫌-30 進捗-20 スコア-50', 'derail');
+    playFail();
+    if (state.mood <= 0) { endGame('mood'); return; }
+  }
+  updateGameUI();
+
+  // クールダウンバー
+  const btn  = document.getElementById('emergencyBtn');
+  const bar  = document.getElementById('emergencyCdBar');
+  const txt  = document.getElementById('emergencyCdTxt');
+  const total = emergencyCooldown;
+  if (bar) bar.style.width = '100%';
+  if (txt) txt.textContent = `クールダウン: ${emergencyCooldown}秒`;
+
+  emergencyCdTimer = setInterval(() => {
+    emergencyCooldown--;
+    const pct = (emergencyCooldown / total) * 100;
+    if (bar) bar.style.width = pct + '%';
+    if (txt) txt.textContent = emergencyCooldown > 0 ? `クールダウン: ${emergencyCooldown}秒` : '';
+    if (emergencyCooldown <= 0) {
+      clearInterval(emergencyCdTimer);
+      if (btn) btn.disabled = false;
+    }
+  }, 1000);
+});
+
+function resetEmergencyBtn() {
+  emergencyCooldown = 0;
+  if (emergencyCdTimer) clearInterval(emergencyCdTimer);
+  const btn = document.getElementById('emergencyBtn');
+  const bar = document.getElementById('emergencyCdBar');
+  const txt = document.getElementById('emergencyCdTxt');
+  if (btn) btn.disabled = false;
+  if (bar) bar.style.width = '0%';
+  if (txt) txt.textContent = '';
+}
+
+// タイトル → セットアップ
+function enterSetup() {
+  const ts = document.getElementById('titleScreen');
+  ts.style.opacity = '0';
+  setTimeout(() => { ts.style.display = 'none'; show('setupScreen'); initSetup(); }, 500);
+}
+
+// 初期化
+show('titleScreenOld');
+</script>
+</body>
+</html>
